@@ -64,6 +64,8 @@ public static class Cmd
     public const ushort InEarRead = 0xC00E;    // 49166
     public const ushort GetGesture = 0xC018;   // 49176
     public const ushort AncRead = 0xC01E;      // 49182
+    public const ushort LegacyEqRead = 0xC01F; // 49183 (legacy presets)
+    public const ushort PersonalAncRead = 0xC020; // 49184 (Ear 2 only)
     public const ushort LatencyRead = 0xC041;  // 49217
     public const ushort Firmware = 0xC042;     // 49218
     public const ushort AdvancedEqRead = 0xC04C; // 49228
@@ -74,6 +76,8 @@ public static class Cmd
     public const ushort SetGesture = 0xF003;   // 61443
     public const ushort SetInEar = 0xF004;     // 61444
     public const ushort SetAnc = 0xF00F;       // 61455
+    public const ushort SetLegacyEq = 0xF010;  // 61456 (legacy presets)
+    public const ushort SetPersonalAnc = 0xF011; // 61457 (Ear 2 only)
     public const ushort EarFitTest = 0xF014;   // 61460
     public const ushort SetListening = 0xF01D; // 61469 (B172/B168)
     public const ushort SetLatency = 0xF040;   // 61504
@@ -82,6 +86,7 @@ public static class Cmd
     public const ushort RespBattery = 0x4007;  // 16391
     public const ushort EventBattery = 0xE001; // 57345
     public const ushort RespInEar = 0x400E;    // 16398
+    public const ushort RespPersonalAnc = 0x4020; // 16416
     public const ushort RespAnc = 0x401E;      // 16414
     public const ushort EventAnc = 0xE003;     // 57347
     public const ushort RespGesture = 0x4018;  // 16408

@@ -35,7 +35,7 @@
                                    Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="0,4,0,0"/>
                         <TextBlock x:Name="FirmwareText" Text="Firmware: —"
                                    Foreground="{StaticResource MutedBrush}" FontSize="13"/>
-                        <Grid Margin="0,10,0,6">
+                        <Grid Margin="0,10,0,6" x:Name="BudPairGrid">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition/><ColumnDefinition/>
                             </Grid.ColumnDefinitions>
@@ -44,6 +44,10 @@
                             <Image x:Name="BudImgR" Grid.Column="1" Height="120" Stretch="Uniform"
                                    Source="Assets/Buds/espeon_black_right.png"/>
                         </Grid>
+                        <Image x:Name="BudImgSingle" Height="120" Stretch="Uniform"
+                               Margin="0,10,0,6" Visibility="Collapsed"/>
+                        <StackPanel x:Name="ColorDots" Orientation="Horizontal" HorizontalAlignment="Center"
+                                    Margin="0,2,0,0"/>
                         <Grid Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition/><ColumnDefinition/>
@@ -72,7 +76,7 @@
                             Width="150" Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
 
-                <GroupBox Header="Noise Cancellation">
+                <GroupBox Header="Noise Cancellation" x:Name="NoiseCard">
                     <StackPanel>
                         <TextBlock x:Name="AncSub" Text="—" FontSize="13"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
@@ -106,7 +110,7 @@
                     </StackPanel>
                 </GroupBox>
 
-                <GroupBox Header="Ultra bass">
+                <GroupBox Header="Ultra bass" x:Name="BassCard">
                     <StackPanel>
                         <TextBlock x:Name="BassSub" Text="—" FontSize="13"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
@@ -138,8 +142,11 @@
 
                 <GroupBox Header="Controls">
                     <StackPanel>
-                        <CheckBox x:Name="InEarCheck" Content="In-ear detection"
-                                  Checked="InEar_Changed" Unchecked="InEar_Changed"/>
+                    <CheckBox x:Name="InEarCheck" Content="In-ear detection"
+                              Checked="InEar_Changed" Unchecked="InEar_Changed"/>
+                    <CheckBox x:Name="PersonalAncCheck" Content="Personalized ANC (Ear 2)"
+                              Checked="PersonalAnc_Changed" Unchecked="PersonalAnc_Changed"
+                              Visibility="Collapsed"/>
                         <CheckBox x:Name="LatencyCheck" Content="Low lag mode"
                                   Checked="Latency_Changed" Unchecked="Latency_Changed"/>
                         <CheckBox x:Name="AutoStartCheck" Content="Start with Windows (tray)"

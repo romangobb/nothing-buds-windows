@@ -106,7 +106,8 @@ public partial class MainWindow : Window
                 BassSub.Text = "—";
                 return;
             }
-            DeviceNameText.Text = d.Name;
+            var p = d.Profile;
+            DeviceNameText.Text = p.MarketingName;
             StatusText.Text = live ? $"Connected  ·  {d.Mac}" : "Disconnected — retrying…";
             FirmwareText.Text = string.IsNullOrEmpty(d.Firmware) ? "Firmware: —" : $"Firmware: {d.Firmware}";
             BattLRun.Text = Batt(d.BatteryLeft, d.ChargingLeft);
@@ -115,17 +116,148 @@ public partial class MainWindow : Window
             BattBarR.Value = d.BatteryRight ?? 0;
             BattCaseText.Text = d.BatteryCase.HasValue
                 ? $"Case {d.BatteryCase}%{(d.ChargingCase ? " ⚡" : "")}" : "";
+
+            // Feature gating per model profile.
+            NoiseCard.Visibility = p.HasAnc ? Visibility.Visible : Visibility.Collapsed;
+            BassCard.Visibility = p.HasBass ? Visibility.Visible : Visibility.Collapsed;
+            EarFitButton.Visibility = p.HasEarFit ? Visibility.Visible : Visibility.Collapsed;
+            InEarCheck.Visibility = p.HasInEar ? Visibility.Visible : Visibility.Collapsed;
+            PersonalAncCheck.Visibility = p.HasPersonalAnc ? Visibility.Visible : Visibility.Collapsed;
+
+            UpdateHeroImages(d);
             SetAnc(d.Anc);
             AncSub.Text = AncSubtitle(d.Anc);
-            EqCombo.SelectedIndex = (int)d.Listening;
+            SyncEqCombo(d);
             BassEnable.IsChecked = d.BassEnabled;
             BassSlider.Value = d.BassLevel;
             BassLabel.Text = d.BassLevel.ToString();
             BassSub.Text = d.BassEnabled ? $"On · Level {d.BassLevel}" : "Off";
             InEarCheck.IsChecked = d.InEar;
+            PersonalAncCheck.IsChecked = d.PersonalAnc;
             LatencyCheck.IsChecked = d.Latency;
         }
         finally { _syncing = false; }
+    }
+
+    private string _dotsFor = "";
+    private void UpdateHeroImages(EarDevice d)
+    {
+        var p = d.Profile;
+        bool single = p.SingleImage;
+        BudPairGrid.Visibility = (p.ImagePrefix != null && !single) ? Visibility.Visible : Visibility.Collapsed;
+        BudImgSingle.Visibility = (p.ImagePrefix != null && single) ? Visibility.Visible : Visibility.Collapsed;
+        if (p.ImagePrefix == null) { ColorDots.Children.Clear(); _dotsFor = ""; return; }
+        if (!single)
+        {
+            SetImage(BudImgL, d.ImageLeft);
+            SetImage(BudImgR, d.ImageRight);
+        }
+        else SetImage(BudImgSingle, d.ImageSingle);
+        string key = d.Mac + "|" + p.ModelId + "|" + d.SelectedColor;
+        if (key != _dotsFor) { BuildColorDots(d); _dotsFor = key; }
+    }
+
+    private static void SetImage(System.Windows.Controls.Image img, string? rel)
+    {
+        try
+        {
+            if ((img.Tag as string) == rel) return;
+            img.Tag = rel;
+            img.Source = rel == null ? null
+                : new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri($"pack://application:,,,/{rel}"));
+        }
+        catch { img.Source = null; }
+    }
+
+    private void BuildColorDots(EarDevice d)
+    {
+        ColorDots.Children.Clear();
+        var colors = d.Profile.Colors;
+        if (colors.Length <= 1) return;
+        foreach (string c in colors)
+        {
+            string color = c; // closure copy
+            var btn = new System.Windows.Controls.Button
+            {
+                Width = 26, Height = 26, Margin = new Thickness(2, 0, 2, 0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = color,
+                MinHeight = 0, Padding = new Thickness(0),
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+            };
+            // Flat template: skip the global pill-button chrome.
+            var root = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            root.SetValue(System.Windows.Controls.Border.BackgroundProperty,
+                System.Windows.Media.Brushes.Transparent);
+            var presenter = new FrameworkElementFactory(typeof(System.Windows.Controls.ContentPresenter));
+            presenter.SetValue(System.Windows.Controls.ContentPresenter.HorizontalAlignmentProperty,
+                System.Windows.HorizontalAlignment.Center);
+            presenter.SetValue(System.Windows.Controls.ContentPresenter.VerticalAlignmentProperty,
+                System.Windows.VerticalAlignment.Center);
+            root.AppendChild(presenter);
+            btn.Template = new System.Windows.Controls.ControlTemplate(typeof(System.Windows.Controls.Button))
+            {
+                VisualTree = root,
+            };
+            var ring = new System.Windows.Controls.Border
+            {
+                Width = 24, Height = 24, CornerRadius = new System.Windows.CornerRadius(12),
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(color == d.SelectedColor ? 2 : 0),
+                BorderBrush = System.Windows.Media.Brushes.White,
+                Child = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 16, Height = 16, Fill = ColorDotBrush(color),
+                },
+            };
+            btn.Content = ring;
+            btn.Click += (_, _) =>
+            {
+                var dev = _devices.ActiveDevice;
+                if (dev == null) return;
+                dev.SelectedColor = color;
+                UpdateHeroImages(dev);
+            };
+            ColorDots.Children.Add(btn);
+        }
+    }
+
+    private static System.Windows.Media.Brush ColorDotBrush(string color) =>
+        color.ToLowerInvariant().Replace(" ", "") switch
+        {
+            "black" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1b, 0x1d, 0x1f)),
+            "white" => System.Windows.Media.Brushes.WhiteSmoke,
+            "orange" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xe8, 0x6a, 0x1f)),
+            "blue" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3a, 0x6e, 0xa5)),
+            "green" or "lightgreen" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x5a, 0x7d, 0x4f)),
+            "yellow" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xe8, 0xc5, 0x1f)),
+            "grey" or "gray" or "darkgrey" or "lightgrey" => System.Windows.Media.Brushes.Gray,
+            _ => System.Windows.Media.Brushes.Gray,
+        };
+
+    private void SyncEqCombo(EarDevice d)
+    {
+        var labels = d.EqOptions.Select(o => o.Label).ToList();
+        var cur = EqCombo.ItemsSource as System.Collections.IList;
+        bool same = cur != null && cur.Count == labels.Count &&
+                    labels.Zip(cur.Cast<object>(), (a, b) => a == (b as string)).All(x => x);
+        if (!same)
+        {
+            EqCombo.ItemsSource = labels;
+            EqCombo.SelectedIndex = labels.Count > 0 ? 0 : -1;
+        }
+        int idx = d.EqOptions.ToList().FindIndex(o => o.Value == d.EqValue);
+        if (idx >= 0) EqCombo.SelectedIndex = idx;
+    }
+
+    private int EqComboValue()
+    {
+        var d = _devices.ActiveDevice;
+        int i = EqCombo.SelectedIndex;
+        if (d == null || i < 0 || i >= d.EqOptions.Count) return -1;
+        return d.EqOptions[i].Value;
     }
 
     private static string Batt(int? v, bool chg) =>
@@ -192,7 +324,7 @@ public partial class MainWindow : Window
     // Commit-on-close for both dropdowns: Esc (or no change) resyncs the UI,
     // anything else commits. Prevents highlight-walking from firing actions.
     private bool _comboEsc;
-    private int _eqOpenIndex = -1;
+    private int _eqOpenValue = -1;
     private object? _devOpenItem;
 
     private void Combo_EscMark(object sender, System.Windows.Input.KeyEventArgs e)
@@ -202,24 +334,26 @@ public partial class MainWindow : Window
 
     private void EqCombo_Opened(object sender, EventArgs e)
     {
-        _eqOpenIndex = EqCombo.SelectedIndex;
+        _eqOpenValue = EqComboValue();
         _comboEsc = false;
     }
 
     private async void EqCombo_Closed(object? sender, EventArgs e)
     {
-        if (_syncing || _devices.ActiveDevice == null) { _comboEsc = false; return; }
+        var d = _devices.ActiveDevice;
+        if (_syncing || d == null) { _comboEsc = false; return; }
         try
         {
-            if (_comboEsc || EqCombo.SelectedIndex < 0 || EqCombo.SelectedIndex == _eqOpenIndex)
+            int v = EqComboValue();
+            if (_comboEsc || v < 0 || v == _eqOpenValue || v == d.EqValue)
             {
                 // Cancel: snap the UI back to the buds' real state
                 _syncing = true;
-                try { EqCombo.SelectedIndex = (int)_devices.ActiveDevice.Listening; }
+                try { SyncEqCombo(d); }
                 finally { _syncing = false; }
                 return;
             }
-            await _devices.ActiveDevice.SetListeningAsync((ListeningPreset)EqCombo.SelectedIndex);
+            await d.SetEqAsync(v);
         }
         finally { _comboEsc = false; }
     }
@@ -253,8 +387,15 @@ public partial class MainWindow : Window
         // Ignored while open (committed in EqCombo_Closed); closed-state
         // arrow changes still apply immediately.
         if (_syncing || EqCombo.IsDropDownOpen || _devices.ActiveDevice == null) return;
-        if (EqCombo.SelectedIndex < 0) return;
-        await _devices.ActiveDevice.SetListeningAsync((ListeningPreset)EqCombo.SelectedIndex);
+        int v = EqComboValue();
+        if (v < 0) return;
+        await _devices.ActiveDevice.SetEqAsync(v);
+    }
+
+    private async void PersonalAnc_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncing || _devices.ActiveDevice == null) return;
+        await _devices.ActiveDevice.SetPersonalAncAsync(PersonalAncCheck.IsChecked.GetValueOrDefault());
     }
 
     private async void Bass_Changed(object sender, RoutedEventArgs e)

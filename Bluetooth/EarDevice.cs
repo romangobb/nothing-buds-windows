@@ -1,11 +1,17 @@
-// High-level CMF Buds Pro 2 (B172) device: owns an RfcommClient,
-// runs the ear-web init sequence, parses responses into bindable state.
+// High-level earbuds device: owns an RfcommClient, runs the init sequence,
+// parses responses into bindable state. Model-specific behavior comes from
+// DeviceCatalog profiles; EQ flavor (listening vs legacy presets) is
+// auto-detected at runtime (whichever of 0x4050 / 0x401F answers).
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NothingBuds.Bluetooth;
+
+public enum EqStyle { Legacy, Listening }
+
+public sealed record EqOption(int Value, string Label);
 
 public sealed class EarDevice : INotifyPropertyChanged, IDisposable
 {
@@ -14,7 +20,8 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
 
     public string Mac { get; }
     public string Name { get; set; }
-    public string BaseModel { get; set; } = "B172";
+    public DeviceProfile Profile { get; private set; }
+    public string BaseModel => Profile.ModelId;
 
     private bool _connected;
     public bool Connected { get => _connected; private set => Set(ref _connected, value); }
@@ -35,13 +42,51 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     public AncMode Anc { get => _anc; private set { if (Set(ref _anc, value)) OnPropertyChanged(nameof(AncLabel)); } }
     public string AncLabel => _anc.ToString();
 
+    // EQ: two wire flavors, auto-detected.
+    private EqStyle _eqStyle = EqStyle.Listening;
+    public EqStyle ActiveEq
+    {
+        get => _eqStyle;
+        private set
+        {
+            if (Set(ref _eqStyle, value))
+            {
+                OnPropertyChanged(nameof(EqOptions));
+                OnPropertyChanged(nameof(EqValue));
+            }
+        }
+    }
+
     private ListeningPreset _listening = ListeningPreset.Dirac;
     public ListeningPreset Listening
     {
         get => _listening;
-        private set { if (Set(ref _listening, value)) OnPropertyChanged(nameof(ListeningLabel)); }
+        private set { if (Set(ref _listening, value)) { OnPropertyChanged(nameof(ListeningLabel)); OnPropertyChanged(nameof(EqValue)); } }
     }
     public string ListeningLabel => ListeningLabels.Label(_listening);
+
+    private int _legacyEq;
+    public int LegacyEq
+    {
+        get => _legacyEq;
+        private set { if (Set(ref _legacyEq, value)) OnPropertyChanged(nameof(EqValue)); }
+    }
+
+    private static readonly EqOption[] ListeningOptions =
+    {
+        new(0, "Dirac OPTEO"), new(1, "Rock"), new(2, "Electronic"),
+        new(3, "Pop"), new(4, "Enhance vocals"), new(5, "Classical"), new(6, "Custom"),
+    };
+    private static readonly EqOption[] LegacyOptions =
+    {
+        new(0, "Balanced"), new(1, "Voice"), new(2, "Treble"),
+        new(3, "Bass"), new(5, "Custom"),
+    };
+
+    public IReadOnlyList<EqOption> EqOptions =>
+        ActiveEq == EqStyle.Listening ? ListeningOptions : LegacyOptions;
+
+    public int EqValue => ActiveEq == EqStyle.Listening ? (int)Listening : LegacyEq;
 
     private bool _bassEnabled;
     public bool BassEnabled { get => _bassEnabled; private set => Set(ref _bassEnabled, value); }
@@ -52,12 +97,47 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     public bool InEar { get => _inEar; private set => Set(ref _inEar, value); }
     private bool _latency;
     public bool Latency { get => _latency; private set => Set(ref _latency, value); }
+    private bool _personalAnc;
+    public bool PersonalAnc { get => _personalAnc; private set => Set(ref _personalAnc, value); }
 
     private string _status = "Disconnected";
     public string Status { get => _status; private set => Set(ref _status, value); }
 
     private string _gestureSummary = "";
     public string GestureSummary { get => _gestureSummary; private set => Set(ref _gestureSummary, value); }
+
+    // Hero images + colorways.
+    private string _color = "";
+    public string SelectedColor
+    {
+        get => _color;
+        set
+        {
+            if (Set(ref _color, value))
+            {
+                OnPropertyChanged(nameof(ImageLeft));
+                OnPropertyChanged(nameof(ImageRight));
+                OnPropertyChanged(nameof(ImageSingle));
+            }
+        }
+    }
+
+    public bool HasImages => Profile.ImagePrefix != null;
+    public string? ImageLeft => Img("left");
+    public string? ImageRight => Img("right");
+    public string? ImageSingle => Profile.SingleImage ? Img(null) : null;
+
+    private string? Img(string? side)
+    {
+        var p = Profile;
+        if (p.ImagePrefix == null) return null;
+        string file = p.Colors.Length == 0
+            ? (side == null ? $"{p.ImagePrefix}.png" : $"{p.ImagePrefix}_{side}.png")
+            : (side == null
+                ? $"{p.ImagePrefix}_{p.ColorToken(SelectedColor)}.png"
+                : $"{p.ImagePrefix}_{p.ColorToken(SelectedColor)}_{side}.png");
+        return $"Assets/Buds/{file}";
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     /// <summary>Raised when the RFCOMM link drops (buds left, taken by phone, case closed).</summary>
@@ -67,6 +147,9 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     {
         Mac = BluetoothEndPoint.Normalize(mac);
         Name = name;
+        Profile = DeviceCatalog.Resolve(name);
+        _eqStyle = Profile.Eq == EqHint.Legacy ? EqStyle.Legacy : EqStyle.Listening;
+        _color = Profile.Colors.Length > 0 ? Profile.Colors[0] : "";
         _rf.FrameReceived += OnFrame;
         _rf.Disconnected += () =>
         {
@@ -79,6 +162,32 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                 ConnectionLost?.Invoke(this);
             }
         };
+    }
+
+    /// <summary>Re-resolve profile (friendly name may have changed); returns true if model changed.</summary>
+    public bool RefreshProfile(string friendlyName)
+    {
+        var p = DeviceCatalog.Resolve(friendlyName);
+        return ApplyProfile(p);
+    }
+
+    /// <summary>Pin profile to a remembered model id (survives user-renamed buds).</summary>
+    public bool ApplyModel(string modelId)
+    {
+        if (string.IsNullOrEmpty(modelId)) return false;
+        return ApplyProfile(DeviceCatalog.ByModel(modelId));
+    }
+
+    private bool ApplyProfile(DeviceProfile p)
+    {
+        if (p.ModelId == Profile.ModelId) return false;
+        Profile = p;
+        ActiveEq = p.Eq == EqHint.Legacy ? EqStyle.Legacy : EqStyle.Listening;
+        SelectedColor = p.Colors.Length > 0 ? p.Colors[0] : "";
+        OnPropertyChanged(nameof(HasImages));
+        OnPropertyChanged(nameof(Profile));
+        OnPropertyChanged(nameof(BaseModel));
+        return true;
     }
 
     private void SetUi(Action a)
@@ -142,21 +251,30 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>ear-web initDevice() order with small gaps (live-verified).</summary>
+    /// <summary>Init sequence; both EQ flavors are queried, the buds' answer picks the UI.</summary>
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {
         if (!Connected) return;
         Status = "Syncing…";
-        var steps = new ushort[]
+        var steps = new List<(ushort cmd, Func<bool> gate)>
         {
-            Cmd.Battery, Cmd.ListeningRead, Cmd.Firmware, Cmd.InEarRead,
-            Cmd.LatencyRead, Cmd.GetGesture, Cmd.AncRead, Cmd.AdvancedEqRead, Cmd.BassRead,
+            (Cmd.Battery, () => true),
+            (Cmd.ListeningRead, () => true),   // 0x4050 answer => listening EQ
+            (Cmd.LegacyEqRead, () => true),    // 0x401F answer => legacy EQ
+            (Cmd.Firmware, () => true),
+            (Cmd.InEarRead, () => Profile.HasInEar),
+            (Cmd.LatencyRead, () => true),
+            (Cmd.GetGesture, () => true),
+            (Cmd.AncRead, () => Profile.HasAnc),
+            (Cmd.AdvancedEqRead, () => true),
+            (Cmd.BassRead, () => Profile.HasBass),
+            (Cmd.PersonalAncRead, () => Profile.HasPersonalAnc),
         };
-        foreach (ushort cmd in steps)
+        foreach (var (cmd, gate) in steps)
         {
             if (!Connected) return;
-            Fire(cmd);
-            try { await Task.Delay(120, ct); } catch (TaskCanceledException) { return; }
+            if (gate()) Fire(cmd);
+            try { await Task.Delay(110, ct); } catch (TaskCanceledException) { return; }
         }
         try { await Task.Delay(300, ct); } catch (TaskCanceledException) { }
         if (Connected) Status = "Connected";
@@ -176,8 +294,12 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                     Firmware = Encoding.ASCII.GetString(p).Trim('\0');
                     break;
                 case Cmd.RespListening:
-                case Cmd.RespLegacyEq:
+                    ActiveEq = EqStyle.Listening;
                     if (p.Length >= 1) Listening = (ListeningPreset)p[0];
+                    break;
+                case Cmd.RespLegacyEq:
+                    ActiveEq = EqStyle.Legacy;
+                    if (p.Length >= 1) LegacyEq = p[0];
                     break;
                 case Cmd.RespAnc:
                 case Cmd.EventAnc:
@@ -193,11 +315,14 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                 case Cmd.RespInEar:
                     if (p.Length >= 3) InEar = p[2] != 0;
                     break;
+                case Cmd.RespPersonalAnc:
+                    if (p.Length >= 1) PersonalAnc = p[0] != 0;
+                    break;
                 case Cmd.RespGesture:
                     GestureSummary = DescribeGestures(p);
                     break;
                 case Cmd.EventEarFit:
-                    break; // handled via dialog callback if needed
+                    break;
                 case Cmd.RespAdvancedEq:
                     break;
             }
@@ -223,7 +348,6 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                 case 0x04: c = lvl; cc = chg; break;
             }
         }
-        // Only overwrite slots present in this report (case absent while worn)
         if (l.HasValue) { BatteryLeft = l; ChargingLeft = cl; }
         if (r.HasValue) { BatteryRight = r; ChargingRight = cr; }
         if (c.HasValue) { BatteryCase = c; ChargingCase = cc; }
@@ -232,23 +356,32 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     private static string DescribeGestures(byte[] p)
     {
         if (p.Length < 1) return "";
-        int n = p[0];
-        return $"{n} mappings";
+        return $"{p[0]} mappings";
     }
 
     // ---- setters (fire-and-forget, buds echo state back) ----
     public Task SetAncAsync(AncMode mode)
     {
+        if (!Profile.HasAnc) return Task.CompletedTask;
         Anc = mode; OnPropertyChanged(nameof(AncLabel));
         Fire(Cmd.SetAnc, new byte[] { 0x01, AncWire.ToWire(mode), 0x00 });
         return Task.Delay(150);
     }
-    public Task SetListeningAsync(ListeningPreset preset)
+    public Task SetEqAsync(int value)
     {
-        Listening = preset; OnPropertyChanged(nameof(ListeningLabel));
-        Fire(Cmd.SetListening, new byte[] { (byte)preset, 0x00 });
+        if (ActiveEq == EqStyle.Listening)
+        {
+            Listening = (ListeningPreset)value; OnPropertyChanged(nameof(ListeningLabel));
+            Fire(Cmd.SetListening, new byte[] { (byte)value, 0x00 });
+        }
+        else
+        {
+            LegacyEq = value;
+            Fire(Cmd.SetLegacyEq, new byte[] { (byte)value, 0x00 });
+        }
         return Task.Delay(150);
     }
+    public Task SetListeningAsync(ListeningPreset preset) => SetEqAsync((int)preset);
     public Task SetBassAsync(bool enabled, int level)
     {
         BassEnabled = enabled; BassLevel = Math.Clamp(level, 1, 5);
@@ -267,6 +400,12 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
         Fire(Cmd.SetInEar, new byte[] { 0x01, 0x01, (byte)(on ? 1 : 0) });
         return Task.Delay(150);
     }
+    public Task SetPersonalAncAsync(bool on)
+    {
+        PersonalAnc = on;
+        Fire(Cmd.SetPersonalAnc, new byte[] { (byte)(on ? 1 : 0) });
+        return Task.Delay(150);
+    }
     public Task RingAsync(bool left, bool on)
     {
         Fire(Cmd.Ring, new byte[] { (byte)(left ? 0x02 : 0x03), (byte)(on ? 0x01 : 0x00) });
@@ -275,6 +414,7 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     public Task RingStopAsync() => RingAsync(true, false);
     public Task LaunchEarFitTestAsync()
     {
+        if (!Profile.HasEarFit) return Task.CompletedTask;
         Fire(Cmd.EarFitTest, new byte[] { 0x01 });
         return Task.Delay(150);
     }

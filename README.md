@@ -66,6 +66,25 @@ Text color is inherited from the window (white), never forced globally, so
 labels stay readable on every surface — including ComboBox dropdowns, list
 selections, and tooltips.
 
+## Supported devices
+
+All 22 audio products from the official app's catalog (`devices_info_list.json`),
+identified automatically by Bluetooth name — no manual model picking:
+
+Nothing Ear (1) · Ear (stick) · Ear (2) · Ear (a) · Ear · Ear (open) · Ear (3) ·
+Ear (3a) · CMF Buds Pro · CMF Buds · CMF Buds 2 · CMF Buds 2 Plus · CMF Buds 2a ·
+CMF Buds Pro 2 · CMF Buds Neo · CMF Neckband Pro · CMF Clip Pro ·
+Nothing Headphone (1) · Headphone (a) · CMF Headphone Pro.
+
+Per-model capability profiles (`Bluetooth/DeviceCatalog.cs`, flags mined from
+the official `ear_white_list.json`) gate ANC / in-ear / Ultra bass / ear-tip
+test / personalized-ANC UI, switch EQ preset lists, and pick bundled product
+renders with colorways. The EQ wire flavor (Dirac listening vs legacy presets)
+is **auto-detected at runtime** — whichever of `0x4050` / `0x401F` answers wins —
+so new firmware and refresh models keep working. Unknown names fall back to a
+generic TWS profile; the battery handshake remains the real gatekeeper.
+Out of scope: firmware updates, spatial-audio/LDAC phone-side toggles.
+
 ## Link supervision
 
 A 5 s watchdog re-dials remembered devices whenever the RFCOMM link drops

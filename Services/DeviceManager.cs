@@ -102,8 +102,12 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
                 var arr = JsonSerializer.Deserialize<List<RememberedDevice>>(json);
                 if (arr != null)
                     foreach (var d in arr)
+                    {
+                        string model = string.IsNullOrEmpty(d.BaseModel)
+                            ? DeviceCatalog.Resolve(d.Name).ModelId : d.BaseModel;
                         _remembered.Add(new RememberedDevice(
-                            BluetoothEndPoint.Normalize(d.Mac), d.Name, d.BaseModel, d.LastConnected));
+                            BluetoothEndPoint.Normalize(d.Mac), d.Name, model, d.LastConnected));
+                    }
             }
         }
         catch { }
@@ -178,7 +182,8 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
             if (ActiveDevice == existing) ActiveDevice = null;
             existing.Dispose();
         }
-        var dev = new EarDevice(r.Mac, r.Name) { BaseModel = r.BaseModel };
+        var dev = new EarDevice(r.Mac, r.Name);
+        dev.ApplyModel(r.BaseModel);
         dev.ConnectionLost += OnLinkLost;
         try
         {
@@ -189,6 +194,7 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
                     ConnectedDevices.Add(dev);
             });
             Touch(r.Mac);
+            UpdateModel(r.Mac, dev.BaseModel);
             PickActive();
             UpdateState();
             Log.Info($"Connected {r.Mac} ({dev.Name}) fw={dev.Firmware} L={dev.BatteryLeft} R={dev.BatteryRight} C={dev.BatteryCase} anc={dev.Anc} eq={dev.Listening}");
@@ -204,6 +210,16 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
         {
             var d = _remembered[i];
             _remembered[i] = d with { LastConnected = DateTime.UtcNow };
+            Save();
+        }
+    }
+
+    private void UpdateModel(string mac, string modelId)
+    {
+        int i = _remembered.FindIndex(d => d.Mac == mac);
+        if (i >= 0 && _remembered[i].BaseModel != modelId)
+        {
+            _remembered[i] = _remembered[i] with { BaseModel = modelId };
             Save();
         }
     }
