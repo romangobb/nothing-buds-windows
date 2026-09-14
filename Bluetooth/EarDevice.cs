@@ -131,11 +131,12 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     {
         var p = Profile;
         if (p.ImagePrefix == null) return null;
+        string tok = p.ImageToken(SelectedColor);
         string file = p.Colors.Length == 0
             ? (side == null ? $"{p.ImagePrefix}.png" : $"{p.ImagePrefix}_{side}.png")
             : (side == null
-                ? $"{p.ImagePrefix}_{p.ColorToken(SelectedColor)}.png"
-                : $"{p.ImagePrefix}_{p.ColorToken(SelectedColor)}_{side}.png");
+                ? $"{p.ImagePrefix}_{tok}.png"
+                : $"{p.ImagePrefix}_{tok}_{side}.png");
         return $"Assets/Buds/{file}";
     }
 

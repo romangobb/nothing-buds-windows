@@ -205,8 +205,10 @@ public partial class MainWindow : Window
             {
                 Width = 24, Height = 24, CornerRadius = new System.Windows.CornerRadius(12),
                 Background = System.Windows.Media.Brushes.Transparent,
-                BorderThickness = new Thickness(color == d.SelectedColor ? 2 : 0),
-                BorderBrush = System.Windows.Media.Brushes.White,
+                BorderThickness = new Thickness(color == d.SelectedColor ? 2 : (NeedsOutline(color) ? 1 : 0)),
+                BorderBrush = color == d.SelectedColor
+                    ? System.Windows.Media.Brushes.White
+                    : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x6e, 0x72, 0x76)),
                 Child = new System.Windows.Shapes.Ellipse
                 {
                     Width = 16, Height = 16, Fill = ColorDotBrush(color),
@@ -218,6 +220,7 @@ public partial class MainWindow : Window
                 var dev = _devices.ActiveDevice;
                 if (dev == null) return;
                 dev.SelectedColor = color;
+                _devices.RememberColor(dev.Mac, color);
                 UpdateHeroImages(dev);
             };
             ColorDots.Children.Add(btn);
@@ -227,14 +230,23 @@ public partial class MainWindow : Window
     private static System.Windows.Media.Brush ColorDotBrush(string color) =>
         color.ToLowerInvariant().Replace(" ", "") switch
         {
-            "black" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1b, 0x1d, 0x1f)),
+            "black" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x00, 0x00)),
+            "darkgrey" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3a, 0x3d, 0x40)),
             "white" => System.Windows.Media.Brushes.WhiteSmoke,
             "orange" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xe8, 0x6a, 0x1f)),
             "blue" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3a, 0x6e, 0xa5)),
-            "green" or "lightgreen" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x5a, 0x7d, 0x4f)),
+            "green" or "lightgreen" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x9d, 0xbe, 0x8c)),
             "yellow" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xe8, 0xc5, 0x1f)),
-            "grey" or "gray" or "darkgrey" or "lightgrey" => System.Windows.Media.Brushes.Gray,
+            "grey" or "gray" or "lightgrey" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xb9, 0xbd, 0xc2)),
             _ => System.Windows.Media.Brushes.Gray,
+        };
+
+    /// <summary>Dark fills need a permanent hairline or they melt into the card.</summary>
+    private static bool NeedsOutline(string color) =>
+        color.ToLowerInvariant().Replace(" ", "") switch
+        {
+            "black" or "darkgrey" => true,
+            _ => false,
         };
 
     private void SyncEqCombo(EarDevice d)

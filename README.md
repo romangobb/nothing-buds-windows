@@ -85,6 +85,12 @@ so new firmware and refresh models keep working. Unknown names fall back to a
 generic TWS profile; the battery handshake remains the real gatekeeper.
 Out of scope: firmware updates, spatial-audio/LDAC phone-side toggles.
 
+Colorways are picked once via the hero dots and remembered per device
+(\SelectedColor\ in \devices.json\). Auto-detection is not possible: the buds
+serial reply identifies old models only (live-tested: a Buds Pro 2 reports a
+serial the old ear-web table misreads as Ear (2)), and newer serials carry no
+color code - Bluetooth names do not either.
+
 ## Link supervision
 
 A 5 s watchdog re-dials remembered devices whenever the RFCOMM link drops

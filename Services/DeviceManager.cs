@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace NothingBuds.Services;
 
-public sealed record RememberedDevice(string Mac, string Name, string BaseModel, DateTime LastConnected);
+public sealed record RememberedDevice(string Mac, string Name, string BaseModel, string SelectedColor, DateTime LastConnected);
 
 public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
 {
@@ -106,7 +106,8 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
                         string model = string.IsNullOrEmpty(d.BaseModel)
                             ? DeviceCatalog.Resolve(d.Name).ModelId : d.BaseModel;
                         _remembered.Add(new RememberedDevice(
-                            BluetoothEndPoint.Normalize(d.Mac), d.Name, model, d.LastConnected));
+                            BluetoothEndPoint.Normalize(d.Mac), d.Name, model,
+                            d.SelectedColor ?? "", d.LastConnected));
                     }
             }
         }
@@ -126,9 +127,21 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
     public void Remember(string mac, string name, string baseModel = "B172")
     {
         mac = BluetoothEndPoint.Normalize(mac);
+        string keepColor = _remembered.FirstOrDefault(d => d.Mac == mac)?.SelectedColor ?? "";
         _remembered.RemoveAll(d => d.Mac == mac);
-        _remembered.Add(new RememberedDevice(mac, name, baseModel, DateTime.UtcNow));
+        _remembered.Add(new RememberedDevice(mac, name, baseModel, keepColor, DateTime.UtcNow));
         Save(); Changed?.Invoke();
+    }
+
+    public void RememberColor(string mac, string color)
+    {
+        mac = BluetoothEndPoint.Normalize(mac);
+        int i = _remembered.FindIndex(d => d.Mac == mac);
+        if (i >= 0 && _remembered[i].SelectedColor != color)
+        {
+            _remembered[i] = _remembered[i] with { SelectedColor = color };
+            Save();
+        }
     }
     public void Forget(string mac)
     {
@@ -184,6 +197,9 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
         }
         var dev = new EarDevice(r.Mac, r.Name);
         dev.ApplyModel(r.BaseModel);
+        if (!string.IsNullOrEmpty(r.SelectedColor) &&
+            dev.Profile.Colors.Contains(r.SelectedColor))
+            dev.SelectedColor = r.SelectedColor;
         dev.ConnectionLost += OnLinkLost;
         try
         {

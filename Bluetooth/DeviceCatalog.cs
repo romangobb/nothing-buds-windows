@@ -22,10 +22,17 @@ public sealed record DeviceProfile(
     EqHint Eq,
     string? ImagePrefix,      // e.g. "espeon" -> {prefix}_{color}_{left|right}.png
     string[] Colors,          // display names; token = lowercase, spaces -> _
-    bool SingleImage)         // neckband/headphones: one product shot per color
+    bool SingleImage)
 {
     public string ColorToken(string color) =>
         color.ToLowerInvariant().Replace(' ', '_');
+
+    /// <summary>Display color -> image file token override
+    /// (e.g. Dark grey buds photographed as black renders).</summary>
+    public Dictionary<string, string> ImageAliases { get; init; } = new();
+
+    public string ImageToken(string color) =>
+        ImageAliases.TryGetValue(color, out string? t) ? t : ColorToken(color);
 }
 
 public static class DeviceCatalog
@@ -70,7 +77,10 @@ public static class DeviceCatalog
             "flaffy", new[]{"White"}, false),
         new("B179", "CMF Buds 2", new[]{"CMF Buds 2"},
             true, true, true, true, false, EqHint.Listening,
-            "girafarig", new[]{"Black","Green","Orange"}, false),
+            "girafarig", new[]{"Dark grey","Light green","Orange"}, false)
+        {
+            ImageAliases = new() { ["Dark grey"] = "black" },
+        },
         new("B184", "CMF Buds 2 Plus", new[]{"CMF Buds 2 Plus"},
             true, true, true, true, false, EqHint.Listening,
             "gligar", new[]{"Blue","White"}, false),
