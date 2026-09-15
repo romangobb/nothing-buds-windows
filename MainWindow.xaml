@@ -7,14 +7,24 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
         <StackPanel>
             <!-- Brand header -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Ellipse Width="10" Height="10" Fill="{StaticResource RedBrush}" Margin="0,0,10,0"
-                         VerticalAlignment="Center"/>
-                <TextBlock Text="NOTHING(BUDS)" FontFamily="{StaticResource NDot}" FontSize="26"
-                           Foreground="White" VerticalAlignment="Center"/>
-            </StackPanel>
-            <TextBlock Text="Unofficial on-device companion · 100% local"
-                       Foreground="{StaticResource MutedBrush}" Margin="20,2,0,14" FontSize="12"/>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource RedBrush}" Margin="0,0,10,0"
+                                 VerticalAlignment="Center"/>
+                        <TextBlock Text="NOTHING(BUDS)" FontFamily="{StaticResource NDot}" FontSize="26"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Unofficial on-device companion · 100% local"
+                               Foreground="{StaticResource MutedBrush}" Margin="20,2,0,0" FontSize="12"/>
+                </StackPanel>
+                <Button x:Name="RefreshButton" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
+                        VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </Grid>
 
             <!-- Multi-device switch (mobile-app style toggle) -->
             <GroupBox x:Name="DeviceSwitcherPanel" Visibility="Collapsed" Header="Active device">
@@ -70,12 +80,6 @@
                     </StackPanel>
                 </Border>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
-                    <Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" Width="150"/>
-                    <Button x:Name="EarFitButton" Content="Ear tip test" Click="EarFit_Click"
-                            Width="150" Style="{StaticResource SecondaryButton}"/>
-                </StackPanel>
-
                 <GroupBox Header="Noise Cancellation" x:Name="NoiseCard">
                     <StackPanel>
                         <TextBlock x:Name="AncSub" Text="—" FontSize="13"
@@ -110,49 +114,53 @@
                     </StackPanel>
                 </GroupBox>
 
-                <GroupBox Header="Ultra bass" x:Name="BassCard">
-                    <StackPanel>
-                        <TextBlock x:Name="BassSub" Text="—" FontSize="13"
-                                   Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
-                        <Grid VerticalAlignment="Center">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <CheckBox x:Name="BassEnable" Grid.Column="0" Content="Ultra bass"
-                                      VerticalAlignment="Center" Checked="Bass_Changed" Unchecked="Bass_Changed"/>
-                            <Slider x:Name="BassSlider" Grid.Column="1" Minimum="1" Maximum="5" Value="3"
-                                    Margin="14,0,8,0" VerticalAlignment="Center"
-                                    HorizontalAlignment="Stretch"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    ValueChanged="BassSlider_Changed"/>
-                            <TextBlock x:Name="BassLabel" Grid.Column="2" Text="3" VerticalAlignment="Center"
-                                       FontFamily="{StaticResource NDot}" FontSize="18" Foreground="White"
-                                       MinWidth="20" TextAlignment="Center"/>
-                        </Grid>
-                    </StackPanel>
-                </GroupBox>
+            <GroupBox Header="Ultra bass" x:Name="BassCard">
+                <StackPanel>
+                    <TextBlock x:Name="BassSub" Text="—" FontSize="13"
+                               Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"/>
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="BassEnable" Grid.Column="0" VerticalAlignment="Center"
+                                  Checked="Bass_Changed" Unchecked="Bass_Changed"/>
+                        <UniformGrid x:Name="BassSegments" Grid.Column="1" Columns="5" Rows="1" Margin="14,0,0,0"
+                                     VerticalAlignment="Center">
+                            <Button Tag="1" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
+                            <Button Tag="2" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
+                            <Button Tag="3" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
+                            <Button Tag="4" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
+                            <Button Tag="5" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
+                        </UniformGrid>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
 
-                <GroupBox Header="Equaliser">
-                    <ComboBox x:Name="EqCombo" SelectionChanged="EqCombo_SelectionChanged"
-                              DropDownOpened="EqCombo_Opened" DropDownClosed="EqCombo_Closed"
-                              PreviewKeyDown="Combo_EscMark"/>
-                </GroupBox>
-
-                <GroupBox Header="Controls">
-                    <StackPanel>
-                    <CheckBox x:Name="InEarCheck" Content="In-ear detection"
-                              Checked="InEar_Changed" Unchecked="InEar_Changed"/>
-                    <CheckBox x:Name="PersonalAncCheck" Content="Personalized ANC (Ear 2)"
-                              Checked="PersonalAnc_Changed" Unchecked="PersonalAnc_Changed"
-                              Visibility="Collapsed"/>
-                        <CheckBox x:Name="LatencyCheck" Content="Low lag mode"
-                                  Checked="Latency_Changed" Unchecked="Latency_Changed"/>
-                        <CheckBox x:Name="AutoStartCheck" Content="Start with Windows (tray)"
-                                  Checked="AutoStart_Changed" Unchecked="AutoStart_Changed"/>
-                    </StackPanel>
-                </GroupBox>
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="{StaticResource CardBrush}"
+                            CornerRadius="24" Padding="20" Margin="0,0,7,0" MinWidth="200"
+                            VerticalAlignment="Stretch">
+                        <StackPanel VerticalAlignment="Center">
+                            <CheckBox x:Name="InEarCheck" Content="In-ear detection"
+                                      Checked="InEar_Changed" Unchecked="InEar_Changed"/>
+                            <CheckBox x:Name="PersonalAncCheck" Content="Personalized ANC"
+                                      Checked="PersonalAnc_Changed" Unchecked="PersonalAnc_Changed"
+                                      Visibility="Collapsed"/>
+                            <CheckBox x:Name="LatencyCheck" Content="Low lag mode"
+                                      Checked="Latency_Changed" Unchecked="Latency_Changed"/>
+                        </StackPanel>
+                    </Border>
+                    <GroupBox Grid.Column="1" Header="Equaliser" Margin="7,0,0,0">
+                        <ComboBox x:Name="EqCombo" SelectionChanged="EqCombo_SelectionChanged"
+                                  DropDownOpened="EqCombo_Opened" DropDownClosed="EqCombo_Closed"
+                                  PreviewKeyDown="Combo_EscMark" VerticalAlignment="Center"/>
+                    </GroupBox>
+                </Grid>
 
                 <GroupBox Header="Find my buds">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -178,6 +186,11 @@
                                TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12"/>
                     <ListBox x:Name="ScanResults" Height="70" Visibility="Collapsed"/>
                 </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Controls">
+                <CheckBox x:Name="AutoStartCheck" Content="Start with Windows (tray)"
+                          Checked="AutoStart_Changed" Unchecked="AutoStart_Changed"/>
             </GroupBox>
         </StackPanel>
     </ScrollViewer>

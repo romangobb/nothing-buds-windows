@@ -445,6 +445,39 @@
             </Setter>
         </Style>
 
+        <!-- Ultra bass stepped segments (APK-style): tap sets the exact level -->
+        <Style x:Key="BassSegmentBase" TargetType="Button">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="17" MinHeight="{TemplateBinding MinHeight}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource RedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BassSegment" TargetType="Button" BasedOn="{StaticResource BassSegmentBase}">
+            <Setter Property="Background" Value="{StaticResource Card2Brush}"/>
+        </Style>
+        <Style x:Key="BassSegmentFilled" TargetType="Button" BasedOn="{StaticResource BassSegmentBase}">
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
         <Style TargetType="Slider">
             <Setter Property="Foreground" Value="{StaticResource RedBrush}"/>
             <Setter Property="Margin" Value="0,4"/>

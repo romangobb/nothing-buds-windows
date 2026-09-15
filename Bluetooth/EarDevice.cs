@@ -257,11 +257,15 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     {
         if (!Connected) return;
         Status = "Syncing…";
+        // EQ flavor: send the hinted read LAST so it wins the race when a
+        // model answers both (B172 echoes legacy reads too).
+        var eqFirst = Profile.Eq == EqHint.Legacy ? Cmd.ListeningRead : Cmd.LegacyEqRead;
+        var eqLast = Profile.Eq == EqHint.Legacy ? Cmd.LegacyEqRead : Cmd.ListeningRead;
         var steps = new List<(ushort cmd, Func<bool> gate)>
         {
             (Cmd.Battery, () => true),
-            (Cmd.ListeningRead, () => true),   // 0x4050 answer => listening EQ
-            (Cmd.LegacyEqRead, () => true),    // 0x401F answer => legacy EQ
+            (eqFirst, () => true),
+            (eqLast, () => true),
             (Cmd.Firmware, () => true),
             (Cmd.InEarRead, () => Profile.HasInEar),
             (Cmd.LatencyRead, () => true),

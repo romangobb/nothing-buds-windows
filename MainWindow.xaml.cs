@@ -120,7 +120,6 @@ public partial class MainWindow : Window
             // Feature gating per model profile.
             NoiseCard.Visibility = p.HasAnc ? Visibility.Visible : Visibility.Collapsed;
             BassCard.Visibility = p.HasBass ? Visibility.Visible : Visibility.Collapsed;
-            EarFitButton.Visibility = p.HasEarFit ? Visibility.Visible : Visibility.Collapsed;
             InEarCheck.Visibility = p.HasInEar ? Visibility.Visible : Visibility.Collapsed;
             PersonalAncCheck.Visibility = p.HasPersonalAnc ? Visibility.Visible : Visibility.Collapsed;
 
@@ -129,8 +128,7 @@ public partial class MainWindow : Window
             AncSub.Text = AncSubtitle(d.Anc);
             SyncEqCombo(d);
             BassEnable.IsChecked = d.BassEnabled;
-            BassSlider.Value = d.BassLevel;
-            BassLabel.Text = d.BassLevel.ToString();
+            PaintBassSegments(d.BassLevel, d.BassEnabled);
             BassSub.Text = d.BassEnabled ? $"On · Level {d.BassLevel}" : "Off";
             InEarCheck.IsChecked = d.InEar;
             PersonalAncCheck.IsChecked = d.PersonalAnc;
@@ -410,32 +408,39 @@ public partial class MainWindow : Window
         await _devices.ActiveDevice.SetPersonalAncAsync(PersonalAncCheck.IsChecked.GetValueOrDefault());
     }
 
+    private void PaintBassSegments(int level, bool enabled)
+    {
+        int i = 0;
+        foreach (var child in BassSegments.Children)
+        {
+            i++;
+            if (child is not System.Windows.Controls.Button b) continue;
+            b.Style = (System.Windows.Style)FindResource(
+                i <= level ? "BassSegmentFilled" : "BassSegment");
+        }
+        BassSegments.Opacity = enabled ? 1 : 0.35;
+    }
+
     private async void Bass_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing || _devices.ActiveDevice == null) return;
         bool en = BassEnable.IsChecked.GetValueOrDefault();
-        int lvl = (int)BassSlider.Value;
+        int lvl = _devices.ActiveDevice.BassLevel;
         await _devices.ActiveDevice.SetBassAsync(en, lvl);
-        BassLabel.Text = lvl.ToString();
+        PaintBassSegments(lvl, en);
         BassSub.Text = en ? $"On · Level {lvl}" : "Off";
     }
 
-    private System.Threading.CancellationTokenSource? _bassCts;
-    private async void BassSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private async void BassSegment_Click(object sender, RoutedEventArgs e)
     {
-        if (_syncing || _devices?.ActiveDevice == null || BassLabel == null || BassSlider == null) return;
-        int lvl = (int)BassSlider.Value;
-        BassLabel.Text = lvl.ToString();
-        _bassCts?.Cancel();
-        var cts = _bassCts = new System.Threading.CancellationTokenSource();
-        try
-        {
-            await Task.Delay(350, cts.Token);
-            bool en = BassEnable.IsChecked.GetValueOrDefault();
-            await _devices.ActiveDevice.SetBassAsync(en, lvl);
-            BassSub.Text = en ? $"On · Level {lvl}" : "Off";
-        }
-        catch (TaskCanceledException) { }
+        if (_syncing || _devices.ActiveDevice == null) return;
+        if (sender is not System.Windows.Controls.Button b) return;
+        if (!int.TryParse(b.Tag as string, out int lvl)) return;
+        lvl = Math.Clamp(lvl, 1, 5);
+        bool en = BassEnable.IsChecked.GetValueOrDefault();
+        PaintBassSegments(lvl, en);
+        BassSub.Text = en ? $"On · Level {lvl}" : "Off";
+        await _devices.ActiveDevice.SetBassAsync(en, lvl);
     }
 
     private async void InEar_Changed(object sender, RoutedEventArgs e)
@@ -471,14 +476,6 @@ public partial class MainWindow : Window
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await _devices.RefreshActiveAsync();
-
-    private async void EarFit_Click(object sender, RoutedEventArgs e)
-    {
-        if (_devices.ActiveDevice == null) return;
-        await _devices.ActiveDevice.LaunchEarFitTestAsync();
-        System.Windows.MessageBox.Show("Ear tip fit test started — check the buds prompts. Results arrive as events.",
-            "NothingBuds", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-    }
 
     private async void AddDevice_Click(object sender, RoutedEventArgs e)
     {
