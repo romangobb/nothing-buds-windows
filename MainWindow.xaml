@@ -138,35 +138,7 @@
                               SizeChanged="BassTrack_Resize">
                             <Border Height="34" CornerRadius="17"
                                     Background="{StaticResource Card2Brush}"/>
-                            <Grid IsHitTestVisible="False">
-                                <!-- Shifted left by R (17): fill edges land between
-                                     dots instead of bisecting them -->
-                                <Grid.RenderTransform>
-                                    <TranslateTransform X="-17"/>
-                                </Grid.RenderTransform>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Grid.Column="0" Grid.ColumnSpan="2" Width="8" Height="8"
-                                         Fill="{StaticResource MutedBrush}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="2" Grid.ColumnSpan="2" Width="8" Height="8"
-                                         Fill="{StaticResource MutedBrush}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="4" Grid.ColumnSpan="2" Width="8" Height="8"
-                                         Fill="{StaticResource MutedBrush}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="6" Grid.ColumnSpan="2" Width="8" Height="8"
-                                         Fill="{StaticResource MutedBrush}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="8" Grid.ColumnSpan="2" Width="8" Height="8"
-                                         Fill="{StaticResource MutedBrush}"
-                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
+                            <Canvas x:Name="BassDots" IsHitTestVisible="False"/>
                             <Border x:Name="BassFill" Height="22" CornerRadius="11"
                                     Background="White" HorizontalAlignment="Left"
                                     VerticalAlignment="Center" Margin="5.67,0,0,0"

@@ -419,6 +419,36 @@ public partial class MainWindow : Window
         double span = w - 2 * BassR / 3;
         BassFill.Width = w > 0 ? Math.Max(span * level / 5.0, 22) : 22;
         BassTrack.Opacity = enabled ? 1 : 0.35;
+        PaintBassDots(w);
+    }
+
+    private readonly List<System.Windows.Shapes.Ellipse> _bassDots = new();
+
+    /// <summary>Step dots at 40/60/80/100%, each shifted R left so fill
+    /// edges never bisect them.</summary>
+    private void PaintBassDots(double w)
+    {
+        if (_bassDots.Count == 0 && BassDots != null)
+        {
+            var muted = (System.Windows.Media.Brush)FindResource("MutedBrush");
+            for (int i = 0; i < 4; i++)
+            {
+                var dot = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 8, Height = 8, Fill = muted,
+                };
+                _bassDots.Add(dot);
+                BassDots.Children.Add(dot);
+            }
+        }
+        if (w <= 0) return;
+        double[] fracs = { 0.4, 0.6, 0.8, 1.0 };
+        double top = Math.Max((BassTrack.ActualHeight - 8) / 2, 0);
+        for (int i = 0; i < _bassDots.Count && i < fracs.Length; i++)
+        {
+            System.Windows.Controls.Canvas.SetLeft(_bassDots[i], w * fracs[i] - BassR - 4);
+            System.Windows.Controls.Canvas.SetTop(_bassDots[i], top);
+        }
     }
 
     private void BassTrack_Resize(object sender, SizeChangedEventArgs e)
