@@ -21,10 +21,12 @@ Primary target (live-verified): **CMF Buds Pro 2** (B172, firmware 1.0.1.74).
   Every later launch connects automatically.
 - **Multi-device toggle**: with two pairs connected, a device switcher appears
   (mobile-app style) to flip the active pair whose settings are shown.
-- **CMF Buds Pro 2 controls**: battery (L/R/Case + charging), ANC
-  (Off / Transparency / Low / High / Mid / Adaptive), EQ presets (Dirac OPTEO…Custom),
-  bass enhance (on/off + level 1–5), in-ear detection, low-latency mode,
-  firmware version, ring-to-find (L/R/stop), ear-tip-fit test trigger, refresh.
+- **Device dashboard**: battery (L/R/Case + charging), ANC circles +
+  strength bar, EQ presets, Ultra bass stepped switch (tap = exact level),
+  in-ear detection, low latency, personalized ANC (Ear 2), firmware,
+  ring-to-find (L/R/stop), adaptive Refresh (top-right). Device toggles sit
+  beside the Equaliser; app options (start with Windows) live in a Controls
+  card at the bottom.
 - **Start with Windows** toggle (HKCU Run key, `--minimized`).
 
 ## Requirements
