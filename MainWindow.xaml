@@ -151,13 +151,19 @@
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Ellipse Grid.Column="3" Grid.ColumnSpan="2" Width="8" Height="8"
+                                <Ellipse Grid.Column="0" Grid.ColumnSpan="2" Width="8" Height="8"
                                          Fill="{StaticResource MutedBrush}"
                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="5" Grid.ColumnSpan="2" Width="8" Height="8"
+                                <Ellipse Grid.Column="2" Grid.ColumnSpan="2" Width="8" Height="8"
                                          Fill="{StaticResource MutedBrush}"
                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Ellipse Grid.Column="7" Grid.ColumnSpan="2" Width="8" Height="8"
+                                <Ellipse Grid.Column="4" Grid.ColumnSpan="2" Width="8" Height="8"
+                                         Fill="{StaticResource MutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Grid.Column="6" Grid.ColumnSpan="2" Width="8" Height="8"
+                                         Fill="{StaticResource MutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Grid.Column="8" Grid.ColumnSpan="2" Width="8" Height="8"
                                          Fill="{StaticResource MutedBrush}"
                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
