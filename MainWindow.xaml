@@ -136,6 +136,11 @@
                             <Border Height="34" CornerRadius="17"
                                     Background="{StaticResource Card2Brush}"/>
                             <Grid IsHitTestVisible="False">
+                                <!-- Shifted left by R (17): fill edges land between
+                                     dots instead of bisecting them -->
+                                <Grid.RenderTransform>
+                                    <TranslateTransform X="-17"/>
+                                </Grid.RenderTransform>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
@@ -153,9 +158,10 @@
                                          Fill="{StaticResource MutedBrush}"
                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
-                            <Border x:Name="BassFill" Height="34" CornerRadius="17"
+                            <Border x:Name="BassFill" Height="22" CornerRadius="11"
                                     Background="White" HorizontalAlignment="Left"
-                                    Width="34" IsHitTestVisible="False"/>
+                                    VerticalAlignment="Center"
+                                    Width="22" IsHitTestVisible="False"/>
                         </Grid>
                     </Grid>
                 </StackPanel>

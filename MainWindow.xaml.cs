@@ -412,7 +412,7 @@ public partial class MainWindow : Window
     {
         level = Math.Clamp(level, 1, 5);
         double w = BassTrack.ActualWidth;
-        BassFill.Width = w > 0 ? Math.Max(w * level / 5.0, 34) : 34;
+        BassFill.Width = w > 0 ? Math.Max(w * level / 5.0, 22) : 22;
         BassTrack.Opacity = enabled ? 1 : 0.35;
     }
 
