@@ -125,14 +125,38 @@
                         </Grid.ColumnDefinitions>
                         <CheckBox x:Name="BassEnable" Grid.Column="0" VerticalAlignment="Center"
                                   Checked="Bass_Changed" Unchecked="Bass_Changed"/>
-                        <UniformGrid x:Name="BassSegments" Grid.Column="1" Columns="5" Rows="1" Margin="14,0,0,0"
-                                     VerticalAlignment="Center">
-                            <Button Tag="1" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
-                            <Button Tag="2" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
-                            <Button Tag="3" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
-                            <Button Tag="4" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
-                            <Button Tag="5" Style="{StaticResource BassSegment}" Click="BassSegment_Click"/>
-                        </UniformGrid>
+                        <!-- APK-style stepped bar: gray track, muted step dots,
+                             white fill on top hiding dots at/below the level -->
+                        <Grid x:Name="BassTrack" Grid.Column="1" Margin="14,0,0,0" Height="34"
+                              Background="Transparent" Cursor="Hand" VerticalAlignment="Center"
+                              PreviewMouseLeftButtonDown="BassTrack_Press"
+                              PreviewMouseMove="BassTrack_Move"
+                              PreviewMouseLeftButtonUp="BassTrack_Release"
+                              SizeChanged="BassTrack_Resize">
+                            <Border Height="34" CornerRadius="17"
+                                    Background="{StaticResource Card2Brush}"/>
+                            <Grid IsHitTestVisible="False">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Grid.Column="3" Grid.ColumnSpan="2" Width="8" Height="8"
+                                         Fill="{StaticResource MutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Grid.Column="5" Grid.ColumnSpan="2" Width="8" Height="8"
+                                         Fill="{StaticResource MutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Grid.Column="7" Grid.ColumnSpan="2" Width="8" Height="8"
+                                         Fill="{StaticResource MutedBrush}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Border x:Name="BassFill" Height="34" CornerRadius="17"
+                                    Background="White" HorizontalAlignment="Left"
+                                    Width="34" IsHitTestVisible="False"/>
+                        </Grid>
                     </Grid>
                 </StackPanel>
             </GroupBox>
@@ -146,13 +170,13 @@
                             CornerRadius="24" Padding="20" Margin="0,0,7,0" MinWidth="200"
                             VerticalAlignment="Stretch">
                         <StackPanel VerticalAlignment="Center">
+                            <CheckBox x:Name="LatencyCheck" Content="Low lag mode"
+                                      Checked="Latency_Changed" Unchecked="Latency_Changed"/>
                             <CheckBox x:Name="InEarCheck" Content="In-ear detection"
                                       Checked="InEar_Changed" Unchecked="InEar_Changed"/>
                             <CheckBox x:Name="PersonalAncCheck" Content="Personalized ANC"
                                       Checked="PersonalAnc_Changed" Unchecked="PersonalAnc_Changed"
                                       Visibility="Collapsed"/>
-                            <CheckBox x:Name="LatencyCheck" Content="Low lag mode"
-                                      Checked="Latency_Changed" Unchecked="Latency_Changed"/>
                         </StackPanel>
                     </Border>
                     <GroupBox Grid.Column="1" Header="Equaliser" Margin="7,0,0,0">

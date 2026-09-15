@@ -128,7 +128,7 @@ public partial class MainWindow : Window
             AncSub.Text = AncSubtitle(d.Anc);
             SyncEqCombo(d);
             BassEnable.IsChecked = d.BassEnabled;
-            PaintBassSegments(d.BassLevel, d.BassEnabled);
+            PaintBass(d.BassLevel, d.BassEnabled);
             BassSub.Text = d.BassEnabled ? $"On · Level {d.BassLevel}" : "Off";
             InEarCheck.IsChecked = d.InEar;
             PersonalAncCheck.IsChecked = d.PersonalAnc;
@@ -408,17 +408,18 @@ public partial class MainWindow : Window
         await _devices.ActiveDevice.SetPersonalAncAsync(PersonalAncCheck.IsChecked.GetValueOrDefault());
     }
 
-    private void PaintBassSegments(int level, bool enabled)
+    private void PaintBass(int level, bool enabled)
     {
-        int i = 0;
-        foreach (var child in BassSegments.Children)
-        {
-            i++;
-            if (child is not System.Windows.Controls.Button b) continue;
-            b.Style = (System.Windows.Style)FindResource(
-                i <= level ? "BassSegmentFilled" : "BassSegment");
-        }
-        BassSegments.Opacity = enabled ? 1 : 0.35;
+        level = Math.Clamp(level, 1, 5);
+        double w = BassTrack.ActualWidth;
+        BassFill.Width = w > 0 ? Math.Max(w * level / 5.0, 34) : 34;
+        BassTrack.Opacity = enabled ? 1 : 0.35;
+    }
+
+    private void BassTrack_Resize(object sender, SizeChangedEventArgs e)
+    {
+        var d = _devices.ActiveDevice;
+        if (d != null) PaintBass(d.BassLevel, d.BassEnabled);
     }
 
     private async void Bass_Changed(object sender, RoutedEventArgs e)
@@ -427,20 +428,54 @@ public partial class MainWindow : Window
         bool en = BassEnable.IsChecked.GetValueOrDefault();
         int lvl = _devices.ActiveDevice.BassLevel;
         await _devices.ActiveDevice.SetBassAsync(en, lvl);
-        PaintBassSegments(lvl, en);
+        PaintBass(lvl, en);
         BassSub.Text = en ? $"On · Level {lvl}" : "Off";
     }
 
-    private async void BassSegment_Click(object sender, RoutedEventArgs e)
+    private bool _bassDrag;
+    private System.Threading.CancellationTokenSource? _bassCts;
+
+    private void BassTrack_Press(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _bassDrag = true;
+        BassTrack.CaptureMouse();
+        BassTrack_Set(e);
+        e.Handled = true;
+    }
+
+    private void BassTrack_Move(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_bassDrag) BassTrack_Set(e);
+    }
+
+    private void BassTrack_Release(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _bassDrag = false;
+        BassTrack.ReleaseMouseCapture();
+    }
+
+    private void BassTrack_Set(System.Windows.Input.MouseEventArgs e)
     {
         if (_syncing || _devices.ActiveDevice == null) return;
-        if (sender is not System.Windows.Controls.Button b) return;
-        if (!int.TryParse(b.Tag as string, out int lvl)) return;
-        lvl = Math.Clamp(lvl, 1, 5);
+        double frac = e.GetPosition(BassTrack).X / Math.Max(BassTrack.ActualWidth, 1);
+        // Dots sit on level boundaries; a dot tap belongs to its level.
+        // Epsilon counters FP noise (0.4*5 can read 2.0000000004 -> ceiling 3).
+        int lvl = Math.Clamp((int)Math.Ceiling(frac * 5 - 1e-9), 1, 5);
         bool en = BassEnable.IsChecked.GetValueOrDefault();
-        PaintBassSegments(lvl, en);
+        PaintBass(lvl, en);
         BassSub.Text = en ? $"On · Level {lvl}" : "Off";
-        await _devices.ActiveDevice.SetBassAsync(en, lvl);
+        _bassCts?.Cancel();
+        var cts = _bassCts = new System.Threading.CancellationTokenSource();
+        var dev = _devices.ActiveDevice;
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(250, cts.Token);
+                await dev.SetBassAsync(en, lvl);
+            }
+            catch (TaskCanceledException) { }
+        });
     }
 
     private async void InEar_Changed(object sender, RoutedEventArgs e)
