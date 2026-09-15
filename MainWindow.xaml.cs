@@ -408,11 +408,16 @@ public partial class MainWindow : Window
         await _devices.ActiveDevice.SetPersonalAncAsync(PersonalAncCheck.IsChecked.GetValueOrDefault());
     }
 
+    // Track geometry: height 34 -> R = 17. The fill is inset R/3 on both ends
+    // so its rounded ends stay concentric with the track's curves.
+    private const double BassR = 17.0;
+
     private void PaintBass(int level, bool enabled)
     {
         level = Math.Clamp(level, 1, 5);
         double w = BassTrack.ActualWidth;
-        BassFill.Width = w > 0 ? Math.Max(w * level / 5.0, 22) : 22;
+        double span = w - 2 * BassR / 3;
+        BassFill.Width = w > 0 ? Math.Max(span * level / 5.0, 22) : 22;
         BassTrack.Opacity = enabled ? 1 : 0.35;
     }
 
@@ -457,10 +462,14 @@ public partial class MainWindow : Window
     private void BassTrack_Set(System.Windows.Input.MouseEventArgs e)
     {
         if (_syncing || _devices.ActiveDevice == null) return;
-        double frac = e.GetPosition(BassTrack).X / Math.Max(BassTrack.ActualWidth, 1);
+        double w = Math.Max(BassTrack.ActualWidth, 1);
+        double x = e.GetPosition(BassTrack).X;
+        double frac = (x - BassR / 3) / (w - 2 * BassR / 3);
+        frac = Math.Clamp(frac, 0, 1);
         // Dots sit on level boundaries; a dot tap belongs to its level.
         // Epsilon counters FP noise (0.4*5 can read 2.0000000004 -> ceiling 3).
         int lvl = Math.Clamp((int)Math.Ceiling(frac * 5 - 1e-9), 1, 5);
+        Services.Log.Info($"Bass tap x={x:F1} w={w:F1} frac={frac:F3} -> lvl={lvl}");
         bool en = BassEnable.IsChecked.GetValueOrDefault();
         PaintBass(lvl, en);
         BassSub.Text = en ? $"On · Level {lvl}" : "Off";
