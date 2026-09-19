@@ -128,6 +128,8 @@ public partial class MainWindow : Window
             BassEnable.IsChecked = d.BassEnabled;
             PaintBass(d.BassLevel, d.BassEnabled);
             BassSub.Text = d.BassEnabled ? $"On · Level {d.BassLevel}" : "Off";
+            RingL.Content = d.RingingLeft ? "Stop left" : "Ring left";
+            RingR.Content = d.RingingRight ? "Stop right" : "Ring right";
             InEarCheck.IsChecked = d.InEar;
             PersonalAncCheck.IsChecked = d.PersonalAnc;
             LatencyCheck.IsChecked = d.Latency;
@@ -606,11 +608,16 @@ public partial class MainWindow : Window
 
     private async void RingL_Click(object sender, RoutedEventArgs e)
     {
-        if (_devices.ActiveDevice != null) await _devices.ActiveDevice.RingAsync(left: true, on: true);
+        var dev = _devices.ActiveDevice;
+        if (dev == null) return;
+        // Toggle this side, like the web/mobile app (Stop silences both).
+        await dev.RingAsync(left: true, on: !dev.RingingLeft);
     }
     private async void RingR_Click(object sender, RoutedEventArgs e)
     {
-        if (_devices.ActiveDevice != null) await _devices.ActiveDevice.RingAsync(left: false, on: true);
+        var dev = _devices.ActiveDevice;
+        if (dev == null) return;
+        await dev.RingAsync(left: false, on: !dev.RingingRight);
     }
     private async void RingStop_Click(object sender, RoutedEventArgs e)
     {

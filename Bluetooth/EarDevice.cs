@@ -378,6 +378,8 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                     }
                 case Cmd.EventEarFit:
                     break;
+                case Cmd.RingAck:
+                    break; // delivery confirmation only; side/state tracked on send
                 case Cmd.RespAdvancedEq:
                     break;
             }
@@ -476,12 +478,24 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
         Fire(Cmd.SetPersonalAnc, new byte[] { (byte)(on ? 1 : 0) });
         return Task.Delay(150);
     }
+    private bool _ringL, _ringR;
+    public bool RingingLeft { get => _ringL; private set => Set(ref _ringL, value); }
+    public bool RingingRight { get => _ringR; private set => Set(ref _ringR, value); }
+
     public Task RingAsync(bool left, bool on)
     {
+        if (left) RingingLeft = on; else RingingRight = on;
         Fire(Cmd.Ring, new byte[] { (byte)(left ? 0x02 : 0x03), (byte)(on ? 0x01 : 0x00) });
         return Task.Delay(150);
     }
-    public Task RingStopAsync() => RingAsync(true, false);
+    public Task RingStopAsync()
+    {
+        // Stop BOTH sides: a left-only stop leaves a ringing right bud going,
+        // which is exactly what "Stop does nothing" looks like.
+        Fire(Cmd.Ring, new byte[] { 0x02, 0x00 });
+        Fire(Cmd.Ring, new byte[] { 0x03, 0x00 });
+        return Task.Delay(150);
+    }
     public Task LaunchEarFitTestAsync()
     {
         if (!Profile.HasEarFit) return Task.CompletedTask;

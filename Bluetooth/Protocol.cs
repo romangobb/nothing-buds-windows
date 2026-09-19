@@ -100,6 +100,7 @@ public static class Cmd
     public const ushort RespCustomEq = 0x4044; // 16452 (3-band curve)
     public const ushort RespAdvancedEq = 0x404C; // 16460
     public const ushort EventEarFit = 0xE00D;  // 57357
+    public const ushort RingAck = 0x7002;      // 28674, empty ACK to F002 (side unknown)
 }
 
 /// <summary>Custom-EQ 3-band float codec, ported from ear-web
