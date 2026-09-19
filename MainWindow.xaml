@@ -196,14 +196,14 @@
                         </StackPanel>
                     </GroupBox>
                     <GroupBox Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" x:Name="FindCard" Header="Find my buds" Margin="0,14,0,0">
-                        <StackPanel x:Name="FindButtons" Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button x:Name="RingL" Content="Ring left" Click="RingL_Click" Width="130"
+                        <UniformGrid x:Name="FindButtons" Columns="3" Rows="1">
+                            <Button x:Name="RingL" Content="Ring left" Click="RingL_Click" Margin="4"
                                     Style="{StaticResource SecondaryButton}"/>
-                            <Button x:Name="RingR" Content="Ring right" Click="RingR_Click" Width="130"
+                            <Button x:Name="RingR" Content="Ring right" Click="RingR_Click" Margin="4"
                                     Style="{StaticResource SecondaryButton}"/>
-                            <Button x:Name="RingStop" Content="Stop" Click="RingStop_Click" Width="100"
+                            <Button x:Name="RingStop" Content="Stop" Click="RingStop_Click" Margin="4"
                                     Style="{StaticResource DangerButton}"/>
-                        </StackPanel>
+                        </UniformGrid>
                     </GroupBox>
                 </Grid>
             </StackPanel>

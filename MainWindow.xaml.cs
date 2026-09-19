@@ -253,10 +253,28 @@ public partial class MainWindow : Window
         string key = d.Mac + "|" + d.Profile.ModelId + "|" + (int)d.ActiveEq + "|" + opts.Count;
         if (key != _eqGridKey)
         {
-            EqPresetBox.Children.Clear();
             _eqGridKey = key;
+            // First preset lives in the title row, right of "Equaliser".
+            var hg = new System.Windows.Controls.Grid();
+            hg.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
+                { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+            hg.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
+                { Width = System.Windows.GridLength.Auto });
+            var title = new System.Windows.Controls.TextBlock
+            {
+                Text = "Equaliser",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            };
+            var head = MakeEqPreset(opts[0]);
+            head.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+            head.Margin = new System.Windows.Thickness(0);
+            hg.Children.Add(title);
+            hg.Children.Add(head);
+            System.Windows.Controls.Grid.SetColumn(head, 1);
+            EqCard.Header = hg;
+
+            EqPresetBox.Children.Clear();
             bool hasCustomFooter = opts.Count > 0 && opts[^1].Value == d.CustomValue;
-            EqPresetBox.Children.Add(MakeEqPreset(opts[0]));
             var mid = opts.Skip(1).Take(opts.Count - (hasCustomFooter ? 2 : 1)).ToList();
             if (mid.Count > 0)
             {
@@ -266,11 +284,20 @@ public partial class MainWindow : Window
             }
             if (hasCustomFooter) EqPresetBox.Children.Add(MakeEqPreset(opts[^1]));
         }
-        foreach (var rb in EqPresetBox.Children.OfType<System.Windows.Controls.RadioButton>())
+        foreach (var rb in EqPresetRadios())
             rb.IsChecked = rb.Tag is int v && v == d.EqValue;
+    }
+
+    private System.Collections.Generic.IEnumerable<System.Windows.Controls.RadioButton> EqPresetRadios()
+    {
+        if (EqCard.Header is System.Windows.Controls.Grid hg)
+            foreach (var rb in hg.Children.OfType<System.Windows.Controls.RadioButton>())
+                yield return rb;
+        foreach (var rb in EqPresetBox.Children.OfType<System.Windows.Controls.RadioButton>())
+            yield return rb;
         foreach (var ug in EqPresetBox.Children.OfType<System.Windows.Controls.Primitives.UniformGrid>())
             foreach (var rb in ug.Children.OfType<System.Windows.Controls.RadioButton>())
-                rb.IsChecked = rb.Tag is int v && v == d.EqValue;
+                yield return rb;
     }
 
     private System.Windows.Controls.RadioButton MakeEqPreset(EqOption o)
@@ -281,6 +308,8 @@ public partial class MainWindow : Window
             Tag = o.Value,
             GroupName = "EQPRESET",
             Style = (System.Windows.Style)FindResource("AncLevel"),
+            FontFamily = (System.Windows.Media.FontFamily)FindResource("Inter"),
+            FontSize = 12,
             Margin = new Thickness(4),
             MinHeight = 40,
         };
@@ -304,12 +333,11 @@ public partial class MainWindow : Window
         EqSliders.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
         System.Windows.Controls.Grid.SetRowSpan(EqCard, custom ? 2 : 1);
         System.Windows.Controls.Grid.SetColumnSpan(FindCard, custom ? 1 : 2);
-        FindButtons.Orientation = custom
-            ? System.Windows.Controls.Orientation.Vertical
-            : System.Windows.Controls.Orientation.Horizontal;
-        RingL.Width = custom ? double.NaN : 130;
-        RingR.Width = custom ? double.NaN : 130;
-        RingStop.Width = custom ? double.NaN : 100;
+        FindCard.Margin = custom
+            ? new Thickness(0, 14, 7, 0)
+            : new Thickness(0, 14, 0, 0);
+        FindButtons.Columns = custom ? 1 : 3;
+        FindButtons.Rows = custom ? 3 : 1;
         if (custom)
         {
             EqSliderBass.Value = d.CustomBass;

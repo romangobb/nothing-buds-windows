@@ -381,9 +381,11 @@
                         <Border Background="{TemplateBinding Background}"
                                 CornerRadius="24" Padding="{TemplateBinding Padding}">
                             <StackPanel>
-                                <TextBlock Text="{TemplateBinding Header}"
-                                           FontFamily="{StaticResource NType}" FontSize="19"
-                                           Foreground="White" Margin="0,0,0,2"/>
+                                <ContentPresenter Content="{TemplateBinding Header}"
+                                                  TextElement.FontFamily="{StaticResource NType}"
+                                                  TextElement.FontSize="19"
+                                                  TextElement.Foreground="White"
+                                                  Margin="0,0,0,2"/>
                                 <TextBlock x:Name="Sub" Text="" FontSize="13"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10"
                                            Visibility="Collapsed"/>
