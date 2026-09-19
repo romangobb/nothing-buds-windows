@@ -34,9 +34,6 @@ public partial class MainWindow : Window
             catch { }
         };
 
-        EqCombo.ItemsSource = Enum.GetValues<ListeningPreset>()
-            .Select(p => ListeningLabels.Label(p)).ToList();
-
         try { AutoStartCheck.IsChecked = AutoStart.IsEnabled(); } catch { }
 
         _devices.Changed += RefreshAll;
@@ -126,7 +123,8 @@ public partial class MainWindow : Window
             UpdateHeroImages(d);
             SetAnc(d.Anc);
             AncSub.Text = AncSubtitle(d.Anc);
-            SyncEqCombo(d);
+            SyncEqGrid(d);
+            UpdateEqLayout(d);
             BassEnable.IsChecked = d.BassEnabled;
             PaintBass(d.BassLevel, d.BassEnabled);
             BassSub.Text = d.BassEnabled ? $"On · Level {d.BassLevel}" : "Off";
@@ -247,27 +245,107 @@ public partial class MainWindow : Window
             _ => false,
         };
 
-    private void SyncEqCombo(EarDevice d)
+    private string _eqGridKey = "";
+
+    private void SyncEqGrid(EarDevice d)
     {
-        var labels = d.EqOptions.Select(o => o.Label).ToList();
-        var cur = EqCombo.ItemsSource as System.Collections.IList;
-        bool same = cur != null && cur.Count == labels.Count &&
-                    labels.Zip(cur.Cast<object>(), (a, b) => a == (b as string)).All(x => x);
-        if (!same)
+        var opts = d.EqOptions;
+        string key = d.Mac + "|" + d.Profile.ModelId + "|" + (int)d.ActiveEq + "|" + opts.Count;
+        if (key != _eqGridKey)
         {
-            EqCombo.ItemsSource = labels;
-            EqCombo.SelectedIndex = labels.Count > 0 ? 0 : -1;
+            EqPresetBox.Children.Clear();
+            _eqGridKey = key;
+            bool hasCustomFooter = opts.Count > 0 && opts[^1].Value == d.CustomValue;
+            EqPresetBox.Children.Add(MakeEqPreset(opts[0]));
+            var mid = opts.Skip(1).Take(opts.Count - (hasCustomFooter ? 2 : 1)).ToList();
+            if (mid.Count > 0)
+            {
+                var ug = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 };
+                foreach (var o in mid) ug.Children.Add(MakeEqPreset(o));
+                EqPresetBox.Children.Add(ug);
+            }
+            if (hasCustomFooter) EqPresetBox.Children.Add(MakeEqPreset(opts[^1]));
         }
-        int idx = d.EqOptions.ToList().FindIndex(o => o.Value == d.EqValue);
-        if (idx >= 0) EqCombo.SelectedIndex = idx;
+        foreach (var rb in EqPresetBox.Children.OfType<System.Windows.Controls.RadioButton>())
+            rb.IsChecked = rb.Tag is int v && v == d.EqValue;
+        foreach (var ug in EqPresetBox.Children.OfType<System.Windows.Controls.Primitives.UniformGrid>())
+            foreach (var rb in ug.Children.OfType<System.Windows.Controls.RadioButton>())
+                rb.IsChecked = rb.Tag is int v && v == d.EqValue;
     }
 
-    private int EqComboValue()
+    private System.Windows.Controls.RadioButton MakeEqPreset(EqOption o)
     {
-        var d = _devices.ActiveDevice;
-        int i = EqCombo.SelectedIndex;
-        if (d == null || i < 0 || i >= d.EqOptions.Count) return -1;
-        return d.EqOptions[i].Value;
+        var rb = new System.Windows.Controls.RadioButton
+        {
+            Content = o.Label,
+            Tag = o.Value,
+            GroupName = "EQPRESET",
+            Style = (System.Windows.Style)FindResource("AncLevel"),
+            Margin = new Thickness(4),
+            MinHeight = 40,
+        };
+        rb.Checked += EqPreset_Checked;
+        return rb;
+    }
+
+    private async void EqPreset_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_syncing || _devices.ActiveDevice == null) return;
+        if (sender is not System.Windows.Controls.RadioButton rb) return;
+        if (!rb.IsChecked.GetValueOrDefault() || rb.Tag is not int v) return;
+        var dev = _devices.ActiveDevice;
+        await dev.SetEqAsync(v);
+        if (v == dev.CustomValue) await dev.FireGetCustomEq();
+    }
+
+    private void UpdateEqLayout(EarDevice d)
+    {
+        bool custom = d.IsCustomMode && d.CustomSupported;
+        EqSliders.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
+        System.Windows.Controls.Grid.SetRowSpan(EqCard, custom ? 2 : 1);
+        System.Windows.Controls.Grid.SetColumnSpan(FindCard, custom ? 1 : 2);
+        FindButtons.Orientation = custom
+            ? System.Windows.Controls.Orientation.Vertical
+            : System.Windows.Controls.Orientation.Horizontal;
+        RingL.Width = custom ? double.NaN : 130;
+        RingR.Width = custom ? double.NaN : 130;
+        RingStop.Width = custom ? double.NaN : 100;
+        if (custom)
+        {
+            EqSliderBass.Value = d.CustomBass;
+            EqSliderMid.Value = d.CustomMid;
+            EqSliderTreble.Value = d.CustomTreble;
+            EqValBass.Text = FmtEq(d.CustomBass);
+            EqValMid.Text = FmtEq(d.CustomMid);
+            EqValTreble.Text = FmtEq(d.CustomTreble);
+        }
+    }
+
+    private static string FmtEq(double v) => (v > 0 ? "+" : "") + v.ToString("0");
+
+    private System.Threading.CancellationTokenSource? _eqCts;
+    private void EqSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncing || _devices.ActiveDevice == null) return;
+        if (EqSliderBass == null || EqSliderMid == null || EqSliderTreble == null) return;
+        int b = (int)Math.Round(EqSliderBass.Value);
+        int m = (int)Math.Round(EqSliderMid.Value);
+        int t = (int)Math.Round(EqSliderTreble.Value);
+        EqValBass.Text = FmtEq(b);
+        EqValMid.Text = FmtEq(m);
+        EqValTreble.Text = FmtEq(t);
+        _eqCts?.Cancel();
+        var cts = _eqCts = new System.Threading.CancellationTokenSource();
+        var dev = _devices.ActiveDevice;
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, cts.Token);
+                await dev.SetCustomEqAsync(b, m, t);
+            }
+            catch (TaskCanceledException) { }
+        });
     }
 
     private static string Batt(int? v, bool chg) =>
@@ -331,41 +409,14 @@ public partial class MainWindow : Window
             _devices.SetActive(dev.Mac);
     }
 
-    // Commit-on-close for both dropdowns: Esc (or no change) resyncs the UI,
-    // anything else commits. Prevents highlight-walking from firing actions.
+    // Commit-on-close for the device dropdown: Esc (or no change) resyncs
+    // the UI, anything else commits. Prevents highlight-walking from firing.
     private bool _comboEsc;
-    private int _eqOpenValue = -1;
     private object? _devOpenItem;
 
     private void Combo_EscMark(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.Escape) _comboEsc = true;
-    }
-
-    private void EqCombo_Opened(object sender, EventArgs e)
-    {
-        _eqOpenValue = EqComboValue();
-        _comboEsc = false;
-    }
-
-    private async void EqCombo_Closed(object? sender, EventArgs e)
-    {
-        var d = _devices.ActiveDevice;
-        if (_syncing || d == null) { _comboEsc = false; return; }
-        try
-        {
-            int v = EqComboValue();
-            if (_comboEsc || v < 0 || v == _eqOpenValue || v == d.EqValue)
-            {
-                // Cancel: snap the UI back to the buds' real state
-                _syncing = true;
-                try { SyncEqCombo(d); }
-                finally { _syncing = false; }
-                return;
-            }
-            await d.SetEqAsync(v);
-        }
-        finally { _comboEsc = false; }
     }
 
     private void DeviceCombo_Opened(object sender, EventArgs e)
@@ -390,16 +441,6 @@ public partial class MainWindow : Window
                 _devices.SetActive(dev.Mac);
         }
         finally { _comboEsc = false; }
-    }
-
-    private async void EqCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Ignored while open (committed in EqCombo_Closed); closed-state
-        // arrow changes still apply immediately.
-        if (_syncing || EqCombo.IsDropDownOpen || _devices.ActiveDevice == null) return;
-        int v = EqComboValue();
-        if (v < 0) return;
-        await _devices.ActiveDevice.SetEqAsync(v);
     }
 
     private async void PersonalAnc_Changed(object sender, RoutedEventArgs e)

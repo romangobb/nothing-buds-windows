@@ -74,8 +74,10 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
 
     private static readonly EqOption[] ListeningOptions =
     {
-        new(0, "Dirac OPTEO"), new(1, "Rock"), new(2, "Electronic"),
-        new(3, "Pop"), new(4, "Enhance vocals"), new(5, "Classical"), new(6, "Custom"),
+        // Order is the grid layout: header Dirac, rows Rock/Vocals/Pop +
+        // Electronic/Classical, footer Custom.
+        new(0, "Dirac OPTEO"), new(1, "Rock"), new(4, "Vocals"),
+        new(3, "Pop"), new(2, "Electronic"), new(5, "Classical"), new(6, "Custom"),
     };
     private static readonly EqOption[] LegacyOptions =
     {
@@ -84,9 +86,22 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     };
 
     public IReadOnlyList<EqOption> EqOptions =>
-        ActiveEq == EqStyle.Listening ? ListeningOptions : LegacyOptions;
+        CustomSupported
+            ? (ActiveEq == EqStyle.Listening ? ListeningOptions : LegacyOptions)
+            : (ActiveEq == EqStyle.Listening
+                ? ListeningOptions.Where(o => o.Value != 6).ToList()
+                : LegacyOptions.Where(o => o.Value != 5).ToList());
 
     public int EqValue => ActiveEq == EqStyle.Listening ? (int)Listening : LegacyEq;
+
+    public int CustomValue => ActiveEq == EqStyle.Listening ? 6 : 5;
+    public bool IsCustomMode => EqValue == CustomValue;
+    public bool CustomSupported => BaseModel != "B181";
+
+    private int _cbass, _cmid, _ctreble;
+    public int CustomBass { get => _cbass; private set => Set(ref _cbass, value); }
+    public int CustomMid { get => _cmid; private set => Set(ref _cmid, value); }
+    public int CustomTreble { get => _ctreble; private set => Set(ref _ctreble, value); }
 
     private bool _bassEnabled;
     public bool BassEnabled { get => _bassEnabled; private set => Set(ref _bassEnabled, value); }
@@ -213,13 +228,35 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     }
     private void OnPropertyChanged(string? prop) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
 
+    private EqStyle? _eqConfirmed;
+
     public async Task ConnectAsync(CancellationToken ct = default, int timeoutMs = 8000)
     {
         Status = "Connecting…";
+        _eqConfirmed = null;
         await Task.Run(() => _rf.Connect(Mac, 15, timeoutMs), ct);
         Connected = true;
         Status = "Connected";
+        await DetectEqStyleAsync(ct);
         await RefreshAllAsync(ct);
+    }
+
+    /// <summary>Probe EQ flavors sequentially: the first answer wins and sticks.
+    /// Simultaneous reads raced on models that echo both (B172).</summary>
+    private async Task DetectEqStyleAsync(CancellationToken ct)
+    {
+        EqStyle first = Profile.Eq == EqHint.Legacy ? EqStyle.Legacy : EqStyle.Listening;
+        EqStyle second = first == EqStyle.Legacy ? EqStyle.Listening : EqStyle.Legacy;
+        Fire(first == EqStyle.Legacy ? Cmd.LegacyEqRead : Cmd.ListeningRead);
+        try { await Task.Delay(600, ct); } catch (TaskCanceledException) { return; }
+        if (_eqConfirmed.HasValue || !Connected) return;
+        Fire(second == EqStyle.Legacy ? Cmd.LegacyEqRead : Cmd.ListeningRead);
+        try { await Task.Delay(500, ct); } catch (TaskCanceledException) { return; }
+        if (!_eqConfirmed.HasValue && Connected)
+        {
+            ActiveEq = first; // silent buds: trust the profile hint, stay stable
+            _eqConfirmed = first;
+        }
     }
 
     public void Disconnect()
@@ -252,20 +289,16 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>Init sequence; both EQ flavors are queried, the buds' answer picks the UI.</summary>
+    /// <summary>Init sequence with the confirmed EQ flavor.</summary>
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {
         if (!Connected) return;
         Status = "Syncing…";
-        // EQ flavor: send the hinted read LAST so it wins the race when a
-        // model answers both (B172 echoes legacy reads too).
-        var eqFirst = Profile.Eq == EqHint.Legacy ? Cmd.ListeningRead : Cmd.LegacyEqRead;
-        var eqLast = Profile.Eq == EqHint.Legacy ? Cmd.LegacyEqRead : Cmd.ListeningRead;
+        var eqRead = ActiveEq == EqStyle.Legacy ? Cmd.LegacyEqRead : Cmd.ListeningRead;
         var steps = new List<(ushort cmd, Func<bool> gate)>
         {
             (Cmd.Battery, () => true),
-            (eqFirst, () => true),
-            (eqLast, () => true),
+            (eqRead, () => true),
             (Cmd.Firmware, () => true),
             (Cmd.InEarRead, () => Profile.HasInEar),
             (Cmd.LatencyRead, () => true),
@@ -281,6 +314,7 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
             if (gate()) Fire(cmd);
             try { await Task.Delay(110, ct); } catch (TaskCanceledException) { return; }
         }
+        if (Connected && IsCustomMode && CustomSupported) Fire(Cmd.CustomEqRead);
         try { await Task.Delay(300, ct); } catch (TaskCanceledException) { }
         if (Connected) Status = "Connected";
     }
@@ -299,12 +333,20 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                     Firmware = Encoding.ASCII.GetString(p).Trim('\0');
                     break;
                 case Cmd.RespListening:
-                    ActiveEq = EqStyle.Listening;
-                    if (p.Length >= 1) Listening = (ListeningPreset)p[0];
+                    if (!_eqConfirmed.HasValue || _eqConfirmed == EqStyle.Listening)
+                    {
+                        ActiveEq = EqStyle.Listening;
+                        _eqConfirmed = EqStyle.Listening;
+                        if (p.Length >= 1) Listening = (ListeningPreset)p[0];
+                    }
                     break;
                 case Cmd.RespLegacyEq:
-                    ActiveEq = EqStyle.Legacy;
-                    if (p.Length >= 1) LegacyEq = p[0];
+                    if (!_eqConfirmed.HasValue || _eqConfirmed == EqStyle.Legacy)
+                    {
+                        ActiveEq = EqStyle.Legacy;
+                        _eqConfirmed = EqStyle.Legacy;
+                        if (p.Length >= 1) LegacyEq = p[0];
+                    }
                     break;
                 case Cmd.RespAnc:
                 case Cmd.EventAnc:
@@ -326,6 +368,14 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
                 case Cmd.RespGesture:
                     GestureSummary = DescribeGestures(p);
                     break;
+                case Cmd.RespCustomEq:
+                    {
+                        float[] curve = EqFloat.ParseCurve(p);
+                        CustomBass = (int)Math.Round(curve[0]);
+                        CustomMid = (int)Math.Round(curve[1]);
+                        CustomTreble = (int)Math.Round(curve[2]);
+                        break;
+                    }
                 case Cmd.EventEarFit:
                     break;
                 case Cmd.RespAdvancedEq:
@@ -387,6 +437,21 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
         return Task.Delay(150);
     }
     public Task SetListeningAsync(ListeningPreset preset) => SetEqAsync((int)preset);
+    public Task SetCustomEqAsync(int bass, int mid, int treble)
+    {
+        if (!CustomSupported) return Task.CompletedTask;
+        bass = Math.Clamp(bass, -6, 6);
+        mid = Math.Clamp(mid, -6, 6);
+        treble = Math.Clamp(treble, -6, 6);
+        CustomBass = bass; CustomMid = mid; CustomTreble = treble;
+        Fire(Cmd.SetCustomEq, EqFloat.BuildCurve(bass, mid, treble));
+        return Task.Delay(150);
+    }
+    public Task FireGetCustomEq()
+    {
+        if (CustomSupported) Fire(Cmd.CustomEqRead);
+        return Task.CompletedTask;
+    }
     public Task SetBassAsync(bool enabled, int level)
     {
         BassEnabled = enabled; BassLevel = Math.Clamp(level, 1, 5);

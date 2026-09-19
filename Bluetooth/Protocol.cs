@@ -71,6 +71,7 @@ public static class Cmd
     public const ushort AdvancedEqRead = 0xC04C; // 49228
     public const ushort BassRead = 0xC04E;     // 49230
     public const ushort ListeningRead = 0xC050; // 49232 (B172/B168)
+    public const ushort CustomEqRead = 0xC044;  // 49220 (not B181)
     // SET
     public const ushort Ring = 0xF002;         // 61442
     public const ushort SetGesture = 0xF003;   // 61443
@@ -78,6 +79,7 @@ public static class Cmd
     public const ushort SetAnc = 0xF00F;       // 61455
     public const ushort SetLegacyEq = 0xF010;  // 61456 (legacy presets)
     public const ushort SetPersonalAnc = 0xF011; // 61457 (Ear 2 only)
+    public const ushort SetCustomEq = 0xF041;    // 61505 (53-byte 3-band curve)
     public const ushort EarFitTest = 0xF014;   // 61460
     public const ushort SetListening = 0xF01D; // 61469 (B172/B168)
     public const ushort SetLatency = 0xF040;   // 61504
@@ -95,8 +97,74 @@ public static class Cmd
     public const ushort RespBass = 0x404E;     // 16462
     public const ushort RespListening = 0x4050; // 16464 (B172)
     public const ushort RespLegacyEq = 0x401F; // 16415
+    public const ushort RespCustomEq = 0x4044; // 16452 (3-band curve)
     public const ushort RespAdvancedEq = 0x404C; // 16460
     public const ushort EventEarFit = 0xE00D;  // 57357
+}
+
+/// <summary>Custom-EQ 3-band float codec, ported from ear-web
+/// (formatFloatForEQ / fromFormatFloatForEQ).</summary>
+public static class EqFloat
+{
+    public static byte[] Encode(float f, bool total)
+    {
+        byte[] le = BitConverter.GetBytes(f);
+        Array.Reverse(le); // big-endian
+        if (f != 0f && le[0] == 0 && le[1] == 0 && le[2] == 0)
+            le[3] = (byte)((le[3] | 0x80) & 0xff);
+        Array.Reverse(le); // back to little-endian
+        if (total && f >= 0) return new byte[] { 0x00, 0x00, 0x00, 0x80 };
+        return le;
+    }
+
+    public static float Decode(byte[] le)
+    {
+        byte b0 = le[3], b1 = le[2], b2 = le[1], b3 = le[0]; // big-endian view
+        byte[] raw = new[] { b3, b2, b1, b0 };              // little-endian
+        if (b0 == 0 && b1 == 0 && b2 == 0 && (b3 & 0x80) != 0)
+        {
+            raw[0] = (byte)(b3 & 0x7f);
+            return -BitConverter.ToSingle(raw, 0);
+        }
+        return BitConverter.ToSingle(raw, 0);
+    }
+
+    private static readonly byte[] Template = new byte[]
+    {
+        0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x75, 0x44, 0xc3, 0xf5, 0x28, 0x3f,
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x5a, 0x45,
+        0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x0c, 0x43, 0xcd, 0xcc, 0x4c, 0x3f, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    /// <summary>Builds the 53-byte curve packet. Bands in UI order (bass, mid, treble).</summary>
+    public static byte[] BuildCurve(float bass, float mid, float treble)
+    {
+        if (Template.Length != 53) throw new InvalidOperationException("curve template corrupt");
+        float[] packet = { mid, treble, bass };
+        float highest = 0;
+        foreach (float v in packet) if (v > highest) highest = v;
+        byte[] buf = (byte[])Template.Clone();
+        Encode(highest / -1, true).CopyTo(buf, 1);
+        for (int i = 0; i < 3; i++)
+            Encode(packet[i], false).CopyTo(buf, 6 + i * 13);
+        return buf;
+    }
+
+    /// <summary>Parses a 0x4044 payload into UI order (bass, mid, treble).</summary>
+    public static float[] ParseCurve(byte[] payload)
+    {
+        float[] bands = new float[3];
+        for (int i = 0; i < 3; i++)
+        {
+            int o = 6 + i * 13;
+            if (o + 4 > payload.Length) break;
+            bands[i] = Decode(payload[o..(o + 4)]);
+        }
+        return new[] { bands[2], bands[0], bands[1] };
+    }
 }
 
 /// <summary>B172 (CMF Buds Pro 2) ANC wire values. L1..L6 per ear-web.</summary>

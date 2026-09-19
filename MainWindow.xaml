@@ -153,7 +153,11 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" Background="{StaticResource CardBrush}"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Column="0" Grid.Row="0" Background="{StaticResource CardBrush}"
                             CornerRadius="24" Padding="20" Margin="0,0,7,0" MinWidth="200"
                             VerticalAlignment="Stretch">
                         <StackPanel VerticalAlignment="Center">
@@ -166,23 +170,42 @@
                                       Visibility="Collapsed"/>
                         </StackPanel>
                     </Border>
-                    <GroupBox Grid.Column="1" Header="Equaliser" Margin="7,0,0,0">
-                        <ComboBox x:Name="EqCombo" SelectionChanged="EqCombo_SelectionChanged"
-                                  DropDownOpened="EqCombo_Opened" DropDownClosed="EqCombo_Closed"
-                                  PreviewKeyDown="Combo_EscMark" VerticalAlignment="Center"/>
+                    <GroupBox Grid.Column="1" Grid.Row="0" x:Name="EqCard" Header="Equaliser" Margin="7,0,0,0">
+                        <StackPanel>
+                            <StackPanel x:Name="EqPresetBox"/>
+                            <Grid x:Name="EqSliders" Visibility="Collapsed" Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="EqValBass" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
+                                    <Slider x:Name="EqSliderBass" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="B"/>
+                                    <TextBlock Text="Bass" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="EqValMid" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
+                                    <Slider x:Name="EqSliderMid" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="M"/>
+                                    <TextBlock Text="Mid" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="EqValTreble" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
+                                    <Slider x:Name="EqSliderTreble" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="T"/>
+                                    <TextBlock Text="Treble" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" x:Name="FindCard" Header="Find my buds" Margin="0,14,0,0">
+                        <StackPanel x:Name="FindButtons" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button x:Name="RingL" Content="Ring left" Click="RingL_Click" Width="130"
+                                    Style="{StaticResource SecondaryButton}"/>
+                            <Button x:Name="RingR" Content="Ring right" Click="RingR_Click" Width="130"
+                                    Style="{StaticResource SecondaryButton}"/>
+                            <Button x:Name="RingStop" Content="Stop" Click="RingStop_Click" Width="100"
+                                    Style="{StaticResource DangerButton}"/>
+                        </StackPanel>
                     </GroupBox>
                 </Grid>
-
-                <GroupBox Header="Find my buds">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button x:Name="RingL" Content="Ring left" Click="RingL_Click" Width="130"
-                                Style="{StaticResource SecondaryButton}"/>
-                        <Button x:Name="RingR" Content="Ring right" Click="RingR_Click" Width="130"
-                                Style="{StaticResource SecondaryButton}"/>
-                        <Button x:Name="RingStop" Content="Stop" Click="RingStop_Click" Width="100"
-                                Style="{StaticResource DangerButton}"/>
-                    </StackPanel>
-                </GroupBox>
             </StackPanel>
 
             <GroupBox Header="Remembered devices · auto-connect">
