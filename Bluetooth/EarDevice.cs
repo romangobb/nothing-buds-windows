@@ -75,7 +75,7 @@ public sealed class EarDevice : INotifyPropertyChanged, IDisposable
     private static readonly EqOption[] ListeningOptions =
     {
         // Order is the grid layout: header Dirac, rows Rock/Vocals/Pop +
-        // Electronic/Classical, footer Custom.
+        // Electronic/Classical/Custom.
         new(0, "Dirac OPTEO"), new(1, "Rock"), new(4, "Vocals"),
         new(3, "Pop"), new(2, "Electronic"), new(5, "Classical"), new(6, "Custom"),
     };

@@ -179,17 +179,56 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" HorizontalAlignment="Center">
                                     <TextBlock x:Name="EqValBass" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-                                    <Slider x:Name="EqSliderBass" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="B"/>
+                                    <!-- Vertical twin of the Ultra Bass bar: pill track,
+                                         muted step dots, white fill from the zero
+                                         middle, white knob circle (bare at 0). -->
+                                    <Grid x:Name="EqTrackBass" Width="34" Height="150" Margin="0,8,0,0"
+                                          Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
+                                          Tag="B" PreviewMouseLeftButtonDown="EqTrack_Press"
+                                          PreviewMouseMove="EqTrack_Move"
+                                          PreviewMouseLeftButtonUp="EqTrack_Release"
+                                          SizeChanged="EqTrack_Resize">
+                                        <Border Width="34" Height="150" CornerRadius="17"
+                                                Background="{StaticResource Card2Brush}"/>
+                                        <Canvas x:Name="EqDotsBass" IsHitTestVisible="False"/>
+                                        <Border x:Name="EqFillBass" Width="22" Height="22" CornerRadius="11"
+                                                Background="White" HorizontalAlignment="Center"
+                                                VerticalAlignment="Top" IsHitTestVisible="False"/>
+                                    </Grid>
                                     <TextBlock Text="Bass" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                                     <TextBlock x:Name="EqValMid" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-                                    <Slider x:Name="EqSliderMid" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="M"/>
+                                    <Grid x:Name="EqTrackMid" Width="34" Height="150" Margin="0,8,0,0"
+                                          Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
+                                          Tag="M" PreviewMouseLeftButtonDown="EqTrack_Press"
+                                          PreviewMouseMove="EqTrack_Move"
+                                          PreviewMouseLeftButtonUp="EqTrack_Release"
+                                          SizeChanged="EqTrack_Resize">
+                                        <Border Width="34" Height="150" CornerRadius="17"
+                                                Background="{StaticResource Card2Brush}"/>
+                                        <Canvas x:Name="EqDotsMid" IsHitTestVisible="False"/>
+                                        <Border x:Name="EqFillMid" Width="22" Height="22" CornerRadius="11"
+                                                Background="White" HorizontalAlignment="Center"
+                                                VerticalAlignment="Top" IsHitTestVisible="False"/>
+                                    </Grid>
                                     <TextBlock Text="Mid" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                                     <TextBlock x:Name="EqValTreble" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-                                    <Slider x:Name="EqSliderTreble" Orientation="Vertical" Height="150" Minimum="-6" Maximum="6" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="EqSlider_Changed" HorizontalAlignment="Center" Tag="T"/>
+                                    <Grid x:Name="EqTrackTreble" Width="34" Height="150" Margin="0,8,0,0"
+                                          Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
+                                          Tag="T" PreviewMouseLeftButtonDown="EqTrack_Press"
+                                          PreviewMouseMove="EqTrack_Move"
+                                          PreviewMouseLeftButtonUp="EqTrack_Release"
+                                          SizeChanged="EqTrack_Resize">
+                                        <Border Width="34" Height="150" CornerRadius="17"
+                                                Background="{StaticResource Card2Brush}"/>
+                                        <Canvas x:Name="EqDotsTreble" IsHitTestVisible="False"/>
+                                        <Border x:Name="EqFillTreble" Width="22" Height="22" CornerRadius="11"
+                                                Background="White" HorizontalAlignment="Center"
+                                                VerticalAlignment="Top" IsHitTestVisible="False"/>
+                                    </Grid>
                                     <TextBlock Text="Treble" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 </StackPanel>
                             </Grid>

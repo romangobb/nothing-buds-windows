@@ -266,6 +266,11 @@ public partial class MainWindow : Window
             {
                 Text = "Equaliser",
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                // Explicit: the global TextBlock style (Inter) beats the
+                // GroupBox header's inherited NType, which shrank the title.
+                FontFamily = (System.Windows.Media.FontFamily)FindResource("NType"),
+                FontSize = 19,
+                Foreground = System.Windows.Media.Brushes.White,
             };
             var head = MakeEqPreset(opts[0]);
             head.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
@@ -277,14 +282,16 @@ public partial class MainWindow : Window
 
             EqPresetBox.Children.Clear();
             bool hasCustomFooter = opts.Count > 0 && opts[^1].Value == d.CustomValue;
-            var mid = opts.Skip(1).Take(opts.Count - (hasCustomFooter ? 2 : 1)).ToList();
-            if (mid.Count > 0)
+            var cells = opts.Skip(1).Take(opts.Count - (hasCustomFooter ? 2 : 1)).ToList();
+            // Custom is a standard-size cell completing the last row
+            // (right of Classical), not a full-width footer.
+            if (hasCustomFooter) cells.Add(opts[^1]);
+            if (cells.Count > 0)
             {
                 var ug = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 };
-                foreach (var o in mid) ug.Children.Add(MakeEqPreset(o));
+                foreach (var o in cells) ug.Children.Add(MakeEqPreset(o));
                 EqPresetBox.Children.Add(ug);
             }
-            if (hasCustomFooter) EqPresetBox.Children.Add(MakeEqPreset(opts[^1]));
         }
         foreach (var rb in EqPresetRadios())
             rb.IsChecked = rb.Tag is int v && v == d.EqValue;
@@ -342,31 +349,149 @@ public partial class MainWindow : Window
         FindButtons.Rows = custom ? 3 : 1;
         if (custom)
         {
-            EqSliderBass.Value = d.CustomBass;
-            EqSliderMid.Value = d.CustomMid;
-            EqSliderTreble.Value = d.CustomTreble;
-            EqValBass.Text = FmtEq(d.CustomBass);
-            EqValMid.Text = FmtEq(d.CustomMid);
-            EqValTreble.Text = FmtEq(d.CustomTreble);
+            _eqB = d.CustomBass;
+            _eqM = d.CustomMid;
+            _eqT = d.CustomTreble;
+            RefreshEqFaders();
         }
     }
 
     private static string FmtEq(double v) => (v > 0 ? "+" : "") + v.ToString("0");
 
-    private System.Threading.CancellationTokenSource? _eqCts;
-    private void EqSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    // --- Custom-EQ vertical faders: same physics/design as the Ultra Bass
+    // bar, rotated: press/drag anywhere on the track, snap to integer
+    // -6..+6, white fill from the zero middle, white knob circle at the
+    // value end (bare circle at 0, line length zero), debounced commit.
+    private int _eqB, _eqM, _eqT;
+    private const double EqKnob = 22.0;
+    private const double EqR = 17.0;
+
+    private (System.Windows.Controls.Grid track, System.Windows.Controls.Canvas dots,
+             System.Windows.Controls.Border fill) EqParts(string tag) => tag switch
+    {
+        "M" => (EqTrackMid, EqDotsMid, EqFillMid),
+        "T" => (EqTrackTreble, EqDotsTreble, EqFillTreble),
+        _ => (EqTrackBass, EqDotsBass, EqFillBass),
+    };
+
+    private int EqVal(string tag) => tag switch { "M" => _eqM, "T" => _eqT, _ => _eqB };
+
+    private void RefreshEqFaders()
+    {
+        EqValBass.Text = FmtEq(_eqB);
+        EqValMid.Text = FmtEq(_eqM);
+        EqValTreble.Text = FmtEq(_eqT);
+        PaintEq("B"); PaintEq("M"); PaintEq("T");
+    }
+
+    private void PaintEq(string tag)
+    {
+        var (track, _, fill) = EqParts(tag);
+        double h = track.ActualHeight;
+        double w = track.ActualWidth;
+        if (h <= 0) return;
+        int v = EqVal(tag);
+        double y0 = h / 2;
+        double travel = y0 - EqR / 3 - EqKnob / 2;
+        double yc = y0 - v / 6.0 * travel;
+        double top = Math.Min(yc, y0) - EqKnob / 2;
+        double bottom = Math.Max(yc, y0) + EqKnob / 2;
+        fill.Height = bottom - top;
+        fill.Margin = new Thickness(0, top, 0, 0);
+        PaintEqDots(tag, w, y0, travel);
+    }
+
+    private readonly System.Collections.Generic.Dictionary<string,
+        System.Collections.Generic.List<System.Windows.Shapes.Ellipse>> _eqDots = new();
+
+    /// <summary>Muted step dots at -6..-1/+1..+6 (no zero dot: the fill's
+    /// rounded caps always cover the middle). Fill paints over dots it
+    /// reaches, same as the bass bar.</summary>
+    private void PaintEqDots(string tag, double w, double y0, double travel)
+    {
+        var (_, canvas, _) = EqParts(tag);
+        if (!_eqDots.TryGetValue(tag, out var list))
+        {
+            list = new System.Collections.Generic.List<System.Windows.Shapes.Ellipse>();
+            var muted = (System.Windows.Media.Brush)FindResource("MutedBrush");
+            for (int i = 0; i < 12; i++)
+            {
+                var dot = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 8, Height = 8, Fill = muted,
+                };
+                list.Add(dot);
+                canvas.Children.Add(dot);
+            }
+            _eqDots[tag] = list;
+        }
+        double left = Math.Max((w - 8) / 2, 0);
+        int i2 = 0;
+        for (int v = -6; v <= 6 && i2 < list.Count; v++)
+        {
+            if (v == 0) continue;
+            double yc = y0 - v / 6.0 * travel;
+            System.Windows.Controls.Canvas.SetLeft(list[i2], left);
+            System.Windows.Controls.Canvas.SetTop(list[i2], yc - 4);
+            i2++;
+        }
+    }
+
+    private void EqTrack_Resize(object sender, SizeChangedEventArgs e) =>
+        RefreshEqFaders();
+
+    private void EqTrack_Press(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.UIElement el)
+        {
+            el.CaptureMouse();
+            if (sender is FrameworkElement fe && fe.Tag is string tag)
+                EqTrack_Set(tag, e);
+            e.Handled = true;
+        }
+    }
+
+    private void EqTrack_Move(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is System.Windows.UIElement el && el.IsMouseCaptured &&
+            sender is FrameworkElement fe && fe.Tag is string tag)
+            EqTrack_Set(tag, e);
+    }
+
+    private void EqTrack_Release(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.UIElement el && el.IsMouseCaptured)
+            el.ReleaseMouseCapture();
+    }
+
+    private void EqTrack_Set(string tag, System.Windows.Input.MouseEventArgs e)
     {
         if (_syncing || _devices.ActiveDevice == null) return;
-        if (EqSliderBass == null || EqSliderMid == null || EqSliderTreble == null) return;
-        int b = (int)Math.Round(EqSliderBass.Value);
-        int m = (int)Math.Round(EqSliderMid.Value);
-        int t = (int)Math.Round(EqSliderTreble.Value);
-        EqValBass.Text = FmtEq(b);
-        EqValMid.Text = FmtEq(m);
-        EqValTreble.Text = FmtEq(t);
+        var (track, _, _) = EqParts(tag);
+        double h = Math.Max(track.ActualHeight, 1);
+        double y = e.GetPosition(track).Y;
+        double y0 = h / 2;
+        double travel = Math.Max(y0 - EqR / 3 - EqKnob / 2, 1);
+        int v = Math.Clamp((int)Math.Round((y0 - y) / travel * 6), -6, 6);
+        Services.Log.Info($"Eq tap {tag} y={y:F1} h={h:F1} -> v={v}");
+        switch (tag)
+        {
+            case "M": _eqM = v; break;
+            case "T": _eqT = v; break;
+            default: _eqB = v; break;
+        }
+        RefreshEqFaders();
+        CommitEqDebounced();
+    }
+
+    private System.Threading.CancellationTokenSource? _eqCts;
+    private void CommitEqDebounced()
+    {
         _eqCts?.Cancel();
         var cts = _eqCts = new System.Threading.CancellationTokenSource();
         var dev = _devices.ActiveDevice;
+        if (dev == null) return;
+        int b = _eqB, m = _eqM, t = _eqT;
         Task.Run(async () =>
         {
             try
