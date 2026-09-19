@@ -172,7 +172,7 @@
                     </Border>
                     <GroupBox Grid.Column="1" Grid.Row="0" x:Name="EqCard" Header="Equaliser" Margin="7,0,0,0">
                         <StackPanel>
-                            <StackPanel x:Name="EqPresetBox"/>
+                            <StackPanel x:Name="EqPresetBox" SizeChanged="EqPresetBox_Resize"/>
                             <Grid x:Name="EqSliders" Visibility="Collapsed" Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
@@ -182,16 +182,16 @@
                                     <!-- Vertical twin of the Ultra Bass bar: pill track,
                                          muted step dots, white fill from the zero
                                          middle, white knob circle (bare at 0). -->
-                                    <Grid x:Name="EqTrackBass" Width="34" Height="150" Margin="0,8,0,0"
+                                    <Grid x:Name="EqTrackBass" Width="17" Height="150" Margin="0,8,0,0"
                                           Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
                                           Tag="B" PreviewMouseLeftButtonDown="EqTrack_Press"
                                           PreviewMouseMove="EqTrack_Move"
                                           PreviewMouseLeftButtonUp="EqTrack_Release"
                                           SizeChanged="EqTrack_Resize">
-                                        <Border Width="34" Height="150" CornerRadius="17"
+                                        <Border Width="17" Height="150" CornerRadius="8.5"
                                                 Background="{StaticResource Card2Brush}"/>
                                         <Canvas x:Name="EqDotsBass" IsHitTestVisible="False"/>
-                                        <Border x:Name="EqFillBass" Width="22" Height="22" CornerRadius="11"
+                                        <Border x:Name="EqFillBass" Width="11" Height="11" CornerRadius="5.5"
                                                 Background="White" HorizontalAlignment="Center"
                                                 VerticalAlignment="Top" IsHitTestVisible="False"/>
                                     </Grid>
@@ -199,16 +199,16 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                                     <TextBlock x:Name="EqValMid" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-                                    <Grid x:Name="EqTrackMid" Width="34" Height="150" Margin="0,8,0,0"
+                                    <Grid x:Name="EqTrackMid" Width="17" Height="150" Margin="0,8,0,0"
                                           Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
                                           Tag="M" PreviewMouseLeftButtonDown="EqTrack_Press"
                                           PreviewMouseMove="EqTrack_Move"
                                           PreviewMouseLeftButtonUp="EqTrack_Release"
                                           SizeChanged="EqTrack_Resize">
-                                        <Border Width="34" Height="150" CornerRadius="17"
+                                        <Border Width="17" Height="150" CornerRadius="8.5"
                                                 Background="{StaticResource Card2Brush}"/>
                                         <Canvas x:Name="EqDotsMid" IsHitTestVisible="False"/>
-                                        <Border x:Name="EqFillMid" Width="22" Height="22" CornerRadius="11"
+                                        <Border x:Name="EqFillMid" Width="11" Height="11" CornerRadius="5.5"
                                                 Background="White" HorizontalAlignment="Center"
                                                 VerticalAlignment="Top" IsHitTestVisible="False"/>
                                     </Grid>
@@ -216,16 +216,16 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                                     <TextBlock x:Name="EqValTreble" Text="0" FontFamily="{StaticResource NDot}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-                                    <Grid x:Name="EqTrackTreble" Width="34" Height="150" Margin="0,8,0,0"
+                                    <Grid x:Name="EqTrackTreble" Width="17" Height="150" Margin="0,8,0,0"
                                           Background="Transparent" Cursor="Hand" HorizontalAlignment="Center"
                                           Tag="T" PreviewMouseLeftButtonDown="EqTrack_Press"
                                           PreviewMouseMove="EqTrack_Move"
                                           PreviewMouseLeftButtonUp="EqTrack_Release"
                                           SizeChanged="EqTrack_Resize">
-                                        <Border Width="34" Height="150" CornerRadius="17"
+                                        <Border Width="17" Height="150" CornerRadius="8.5"
                                                 Background="{StaticResource Card2Brush}"/>
                                         <Canvas x:Name="EqDotsTreble" IsHitTestVisible="False"/>
-                                        <Border x:Name="EqFillTreble" Width="22" Height="22" CornerRadius="11"
+                                        <Border x:Name="EqFillTreble" Width="11" Height="11" CornerRadius="5.5"
                                                 Background="White" HorizontalAlignment="Center"
                                                 VerticalAlignment="Top" IsHitTestVisible="False"/>
                                     </Grid>

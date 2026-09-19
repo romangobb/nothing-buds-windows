@@ -258,6 +258,8 @@ public partial class MainWindow : Window
             _eqGridKey = key;
             // First preset lives in the title row, right of "Equaliser".
             var hg = new System.Windows.Controls.Grid();
+            // Bottom 2 + template 2 + button 4 = 8: same gap as between grid rows.
+            hg.Margin = new System.Windows.Thickness(0, 0, 0, 2);
             hg.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
                 { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
             hg.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
@@ -275,6 +277,7 @@ public partial class MainWindow : Window
             var head = MakeEqPreset(opts[0]);
             head.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
             head.Margin = new System.Windows.Thickness(0);
+            _eqHead = head;
             hg.Children.Add(title);
             hg.Children.Add(head);
             System.Windows.Controls.Grid.SetColumn(head, 1);
@@ -293,9 +296,24 @@ public partial class MainWindow : Window
                 EqPresetBox.Children.Add(ug);
             }
         }
+        UpdateEqHeadWidth();
         foreach (var rb in EqPresetRadios())
             rb.IsChecked = rb.Tag is int v && v == d.EqValue;
     }
+
+    private System.Windows.Controls.RadioButton? _eqHead;
+
+    /// <summary>Title-row pill spans 2 grid cells: 2 buttons + the gap
+    /// between them (2*cell - 2*button-margin).</summary>
+    private void UpdateEqHeadWidth()
+    {
+        if (_eqHead == null) return;
+        double box = EqPresetBox.ActualWidth;
+        if (box > 0) _eqHead.Width = box * 2 / 3 - 8;
+    }
+
+    private void EqPresetBox_Resize(object sender, SizeChangedEventArgs e) =>
+        UpdateEqHeadWidth();
 
     private System.Collections.Generic.IEnumerable<System.Windows.Controls.RadioButton> EqPresetRadios()
     {
@@ -363,8 +381,8 @@ public partial class MainWindow : Window
     // -6..+6, white fill from the zero middle, white knob circle at the
     // value end (bare circle at 0, line length zero), debounced commit.
     private int _eqB, _eqM, _eqT;
-    private const double EqKnob = 22.0;
-    private const double EqR = 17.0;
+    private const double EqKnob = 11.0;
+    private const double EqR = 8.5;
 
     private (System.Windows.Controls.Grid track, System.Windows.Controls.Canvas dots,
              System.Windows.Controls.Border fill) EqParts(string tag) => tag switch
@@ -418,21 +436,21 @@ public partial class MainWindow : Window
             {
                 var dot = new System.Windows.Shapes.Ellipse
                 {
-                    Width = 8, Height = 8, Fill = muted,
+                    Width = 4, Height = 4, Fill = muted,
                 };
                 list.Add(dot);
                 canvas.Children.Add(dot);
             }
             _eqDots[tag] = list;
         }
-        double left = Math.Max((w - 8) / 2, 0);
+        double left = Math.Max((w - 4) / 2, 0);
         int i2 = 0;
         for (int v = -6; v <= 6 && i2 < list.Count; v++)
         {
             if (v == 0) continue;
             double yc = y0 - v / 6.0 * travel;
             System.Windows.Controls.Canvas.SetLeft(list[i2], left);
-            System.Windows.Controls.Canvas.SetTop(list[i2], yc - 4);
+            System.Windows.Controls.Canvas.SetTop(list[i2], yc - 2);
             i2++;
         }
     }
