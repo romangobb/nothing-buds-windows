@@ -762,7 +762,9 @@ public partial class MainWindow : Window
     private async void Latency_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing || _devices.ActiveDevice == null) return;
-        await _devices.ActiveDevice.SetLatencyAsync(LatencyCheck.IsChecked.GetValueOrDefault());
+        bool on = LatencyCheck.IsChecked.GetValueOrDefault();
+        await _devices.ActiveDevice.SetLatencyAsync(on);
+        _devices.RememberLatency(_devices.ActiveDevice.Mac, on);
     }
 
     private void AutoStart_Changed(object sender, RoutedEventArgs e)

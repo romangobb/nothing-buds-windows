@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace NothingBuds.Services;
 
-public sealed record RememberedDevice(string Mac, string Name, string BaseModel, string SelectedColor, DateTime LastConnected);
+public sealed record RememberedDevice(string Mac, string Name, string BaseModel, string SelectedColor, DateTime LastConnected, bool LatencyOn = false);
 
 public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
 {
@@ -107,7 +107,7 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
                             ? DeviceCatalog.Resolve(d.Name).ModelId : d.BaseModel;
                         _remembered.Add(new RememberedDevice(
                             BluetoothEndPoint.Normalize(d.Mac), d.Name, model,
-                            d.SelectedColor ?? "", d.LastConnected));
+                            d.SelectedColor ?? "", d.LastConnected, d.LatencyOn));
                     }
             }
         }
@@ -128,8 +128,9 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
     {
         mac = BluetoothEndPoint.Normalize(mac);
         string keepColor = _remembered.FirstOrDefault(d => d.Mac == mac)?.SelectedColor ?? "";
+        bool keepLatency = _remembered.FirstOrDefault(d => d.Mac == mac)?.LatencyOn ?? false;
         _remembered.RemoveAll(d => d.Mac == mac);
-        _remembered.Add(new RememberedDevice(mac, name, baseModel, keepColor, DateTime.UtcNow));
+        _remembered.Add(new RememberedDevice(mac, name, baseModel, keepColor, DateTime.UtcNow, keepLatency));
         Save(); Changed?.Invoke();
     }
 
@@ -143,8 +144,19 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
             Save();
         }
     }
-    public void Forget(string mac)
+    public bool LatencyFor(string mac)
+        => _remembered.FirstOrDefault(d => d.Mac == BluetoothEndPoint.Normalize(mac))?.LatencyOn ?? false;
+    public void RememberLatency(string mac, bool on)
     {
+        mac = BluetoothEndPoint.Normalize(mac);
+        int i = _remembered.FindIndex(d => d.Mac == mac);
+        if (i >= 0 && _remembered[i].LatencyOn != on)
+        {
+            _remembered[i] = _remembered[i] with { LatencyOn = on };
+            Save();
+        }
+    }
+    public void Forget(string mac)    {
         mac = BluetoothEndPoint.Normalize(mac);
         _remembered.RemoveAll(d => d.Mac == mac);
         var live = ConnectedDevices.FirstOrDefault(d => d.Mac == mac);
@@ -211,6 +223,13 @@ public sealed class DeviceManager : INotifyPropertyChanged, IDisposable
             });
             Touch(r.Mac);
             UpdateModel(r.Mac, dev.BaseModel);
+            // Buds forget low-latency on power-off: re-apply the saved
+            // preference on every connect (refresh already read true state).
+            if (r.LatencyOn && !dev.Latency)
+            {
+                try { await dev.SetLatencyAsync(true); Log.Info($"Latency re-applied on {r.Mac}"); }
+                catch (Exception ex) { Log.Info($"Latency re-apply failed: {ex.Message}"); }
+            }
             PickActive();
             UpdateState();
             Log.Info($"Connected {r.Mac} ({dev.Name}) fw={dev.Firmware} L={dev.BatteryLeft} R={dev.BatteryRight} C={dev.BatteryCase} anc={dev.Anc} eq={dev.Listening}");
