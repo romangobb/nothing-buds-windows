@@ -42,7 +42,29 @@ public partial class MainWindow : Window
         Closing += (_, e) =>
         {
             e.Cancel = true;
+            ShowInTaskbar = false;
             Hide(); // background tray app: X hides, Quit exits
+        };
+        // Panel behavior: taskbar entry only while active. Focus loss,
+        // minimize, or X hides to tray; tray reopens (and refreshes).
+        Activated += (_, _) =>
+        {
+            ShowInTaskbar = true;
+            RefreshIfStale();
+        };
+        Deactivated += (_, _) =>
+        {
+            ShowInTaskbar = false;
+            Hide();
+        };
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+                ShowInTaskbar = false;
+                Hide();
+            }
         };
         ScanResults.MouseDoubleClick += ScanResults_DoubleClick;
 
@@ -769,6 +791,27 @@ public partial class MainWindow : Window
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) =>
         await _devices.RefreshActiveAsync();
+
+    // F5 always refreshes now; foreground activation refreshes at most
+    // every 5s so alt-tabbing doesn't spam the buds with GET bursts.
+    private DateTime _lastFgRefresh = DateTime.MinValue;
+
+    private async void RefreshIfStale()
+    {
+        if ((DateTime.UtcNow - _lastFgRefresh).TotalSeconds < 5) return;
+        _lastFgRefresh = DateTime.UtcNow;
+        await _devices.RefreshActiveAsync();
+    }
+
+    private async void Window_PreviewKey(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.F5)
+        {
+            e.Handled = true;
+            _lastFgRefresh = DateTime.UtcNow;
+            await _devices.RefreshActiveAsync();
+        }
+    }
 
     private async void AddDevice_Click(object sender, RoutedEventArgs e)
     {

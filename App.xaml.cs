@@ -1,5 +1,6 @@
 ﻿// App lifecycle: single MainWindow hidden to tray, auto-connect on start,
-// left-click tray icon reopens window centered. Close (X) hides, Exit quits.
+// left-click tray icon reopens window centered. Close (X), minimize, or
+// focus loss hides (taskbar entry only while active); Exit quits.
 
 using NothingBuds.Services;
 

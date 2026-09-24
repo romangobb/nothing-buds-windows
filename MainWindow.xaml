@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="NothingBuds" Height="780" Width="560"
         WindowStartupLocation="CenterScreen"
-        Background="Black" Foreground="White">
+        Background="Black" Foreground="White"
+        PreviewKeyDown="Window_PreviewKey">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
         <StackPanel>
             <!-- Brand header -->
