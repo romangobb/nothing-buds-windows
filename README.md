@@ -9,14 +9,15 @@ A small desktop app that controls Nothing and CMF earbuds straight from your
 Windows PC — battery, noise cancelling, EQ and more, with no phone, no account
 and no internet connection.
 
+
 ![Unofficial](https://img.shields.io/badge/unofficial-not%20affiliated%20with%20Nothing-informational)
 <table table-layout="fixed" width="100%">
   <tr>
     <td align="center" width="50%">
-      <img src="https://github.com/user-attachments/assets/5ce7ab61-2744-4e01-9a80-1ce77c171d18" alt="Screenshot 1" style="max-width: 100%; height: auto;">
+      <img src="https://github.com/user-attachments/assets/59fdaefb-3379-47af-b5e7-d60c078af500" alt="Screenshot 1" style="max-width: 100%; height: auto;">
     </td>
     <td align="center" width="50%">
-      <img src="https://github.com/user-attachments/assets/d2110313-1a17-4b74-bd1b-52e38c849f9c" alt="Screenshot 2" style="max-width: 100%; height: auto;">
+      <img src="https://github.com/user-attachments/assets/11afed47-3c21-49fd-845c-c6c6c5e6eea8" alt="Screenshot 2" style="max-width: 100%; height: auto;">
     </td>
   </tr>
 </table>
