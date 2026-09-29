@@ -1,4 +1,3 @@
-![Build](https://github.com/romangobb/nothing-buds-windows/actions/workflows/build.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Stars](https://img.shields.io/badge/stars-1-ff69b4?logo=github)
 ![Platform: Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?logo=windows)
@@ -11,6 +10,17 @@ Windows PC — battery, noise cancelling, EQ and more, with no phone, no account
 and no internet connection.
 
 ![Unofficial](https://img.shields.io/badge/unofficial-not%20affiliated%20with%20Nothing-informational)
+<table table-layout="fixed" width="100%">
+  <tr>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/5ce7ab61-2744-4e01-9a80-1ce77c171d18" alt="Screenshot 1" style="max-width: 100%; height: auto;">
+    </td>
+    <td align="center" width="50%">
+      <img src="https://github.com/user-attachments/assets/d2110313-1a17-4b74-bd1b-52e38c849f9c" alt="Screenshot 2" style="max-width: 100%; height: auto;">
+    </td>
+  </tr>
+</table>
+
 
 ## What it does
 
